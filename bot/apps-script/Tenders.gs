@@ -165,10 +165,10 @@ function handleTenderButton_(user, action, key, message) {
   }
   if (action === 'prep') {
     setTenderStatus_(key, 'قيد الدراسة');
-    send_(user.chatId, '📑 نبدي حزمة لـ: <b>' + escapeHtml_(t.title) + '</b>\nالرقم والجهة والغلق انعبّوا من النشرة.');
-    return startFlow_(user, 'tender', {
-      number: t.number || t.title, entity: t.entity, closing: t.closing,
-      ref: [t.title, t.link].filter(Boolean).join(' — ')
+    return startFlow_(user, 'ask', {
+      base: 'جهّز حزمة مناقصة: ' + [t.title, t.entity, t.number ? 'رقم ' + t.number : '', t.closing ? 'الغلق ' + t.closing : '']
+        .filter(Boolean).join(' — '),
+      ref: t.link || ''
     });
   }
 }

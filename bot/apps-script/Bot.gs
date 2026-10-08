@@ -92,17 +92,28 @@ function handleUpdate_(u) {
   }
 
   const state = getState_(chatId);
-  if (!state) {
-    showMenu_(chatId, 'اختار من القائمة 👇');
-    return;
-  }
+  if (!state) return handleLoose_(user, msg);
   handleInput_(user, state, msg);
+}
+
+/** رسالة بدون ما يكون بخطوة: نص يتحول لطلب أو بحث، وملف يبدي طلب جديد. */
+function handleLoose_(user, msg) {
+  const text = (msg.text || '').trim();
+  if (msg.document || msg.photo) {
+    startFlow_(user, 'ask', {}, true);
+    return handleInput_(user, getState_(user.chatId), msg);
+  }
+  if (!text || text.charAt(0) === '/') return showMenu_(user.chatId, 'اختار من القائمة 👇');
+  setState_(user.chatId, { flow: 'loose', step: 0, data: { text: text }, files: [] });
+  send_(user.chatId, '«' + escapeHtml_(text.slice(0, 200)) + '»\nشنو أسوي بيها؟', [
+    [btn_('🙋 أرسلها طلب لـ Claude', 'loose:ask'), btn_('🔍 دوّر بالأرشيف', 'loose:search')]
+  ]);
 }
 
 function showMenu_(chatId, text) {
   send_(chatId, text, [
-    [btn_('📑 إنشاء مناقصة', 'menu:tender'), btn_('📝 اعتذار', 'menu:apology')],
-    [btn_('📊 مناقصات اليوم', 'menu:tenders')],
+    [btn_('🙋 اطلب شي', 'menu:ask'), btn_('🔍 بحث بالأرشيف', 'menu:search')],
+    [btn_('📊 مناقصات اليوم', 'menu:tenders'), btn_('📝 اعتذار', 'menu:apology')],
     [btn_('🧾 تسجيل وصل', 'menu:receipt'), btn_('📋 طلباتي', 'menu:mine')]
   ]);
 }
@@ -112,23 +123,22 @@ function showMenu_(chatId, text) {
 // ---------------------------------------------------------------------------
 
 const FLOWS = {
-  tender: ['company', 'number', 'entity', 'closing', 'price', 'files', 'notes', 'confirm'],
+  ask: ['what', 'files'],
+  search: ['query'],
   apology: ['company', 'number', 'entity', 'reason', 'notes', 'confirm'],
   receipt: ['photo', 'amount', 'description']
 };
 
-const FLOW_NAMES = { tender: 'مناقصة', apology: 'اعتذار', receipt: 'وصل' };
+const FLOW_NAMES = { ask: 'طلب', apology: 'اعتذار', receipt: 'وصل' };
 
 const ENTITIES = ['كهرباء الوسط', 'غاز الشمال', 'نفط الشمال', 'مصفى الشمال', 'أخرى (أكتبها)'];
 
-function startFlow_(user, flow, prefill) {
+/** quiet = لا تسأل أول سؤال (المتصل يكمل بنفسه). */
+function startFlow_(user, flow, prefill, quiet) {
   const state = { flow: flow, step: 0, data: prefill || {}, files: [] };
   setState_(user.chatId, state);
-  ask_(user, state);
+  if (!quiet) ask_(user, state);
 }
-
-// خطوات تنعبر إذا جوابها موجود من قبل (مثلاً من مناقصة بنشرة اليوم)
-const PREFILLABLE = ['number', 'entity', 'closing'];
 
 function stepName_(state) {
   const steps = FLOWS[state.flow];
@@ -144,8 +154,19 @@ function next_(user, state) {
 function ask_(user, state) {
   const c = user.chatId;
   const step = stepName_(state);
-  if (PREFILLABLE.indexOf(step) >= 0 && state.data[step]) return next_(user, state);
   switch (step) {
+    case 'what':
+      if (state.data.base) {
+        send_(c, '📑 ' + escapeHtml_(state.data.base) +
+          '\n\nاكتب الشركة والسعر وأي تفصيل ثاني (مثال: أقصى الفرات، +25%):');
+      } else {
+        send_(c, '🙋 شنو تريد؟ اكتبه بكلامك.\nأمثلة:\n• سويلي حزمة مناقصة كهرباء الوسط 17/2026 لأقصى الفرات بسعر +25%\n' +
+          '• اريد كتاب تمديد كفالة 18478\n• دزلي هوية غرفة التجارة وشهادة التأسيس');
+      }
+      break;
+    case 'query':
+      send_(c, '🔍 اكتب اسم الملف أو كلمة منه (مثال: هوية الغرفة، تأسيس، كفالة 18478).');
+      break;
     case 'company':
       send_(c, '🏢 لأي شركة؟', rows_(COMPANIES.map(function (n, i) { return btn_(n, 'co:' + i); }), 2));
       break;
@@ -155,18 +176,9 @@ function ask_(user, state) {
     case 'entity':
       send_(c, '🏛️ الجهة المعلنة؟', rows_(ENTITIES.map(function (n, i) { return btn_(n, 'ent:' + i); }), 2));
       break;
-    case 'closing':
-      send_(c, '📅 موعد الغلق؟ (مثال: 2026/10/20 الساعة 10 صباحاً)');
-      break;
-    case 'price':
-      send_(c, '💰 السعر؟ نسبة فوق الكلفة التخمينية، أو اكتب مبلغ ثابت بالدينار.', [
-        [btn_('+10%', 'price:+10%'), btn_('+25%', 'price:+25%'), btn_('+30%', 'price:+30%'), btn_('+50%', 'price:+50%')],
-        [btn_('حارث يحدد السعر', 'price:يحدده حارث')]
-      ]);
-      break;
     case 'files':
-      send_(c, '📎 ارفع وثيقة الدعوة وأي مرفقات (PDF أو صور أو وورد). ترسلها وحدة وحدة، ومن تخلص دوس الزر.',
-        [[btn_('✅ انتهيت من الرفع', 'files:done')]]);
+      send_(c, '📎 إذا عندك ملفات (وثيقة الدعوة، صور، وورد) ارفعها وحدة وحدة. ومن تخلص، أو ما عندك ملفات، دوس أرسل.',
+        [[btn_('📨 أرسل الطلب', 'files:done')], [btn_('❌ إلغاء', 'confirm:cancel')]]);
       break;
     case 'reason':
       send_(c, '❓ سبب الاعتذار؟', APOLOGY_REASONS.map(function (r, i) { return [btn_(r, 'reason:' + i)]; }));
@@ -194,16 +206,15 @@ function ask_(user, state) {
 
 function summary_(state) {
   const d = state.data;
-  const lines = ['<b>ملخص طلب ' + FLOW_NAMES[state.flow] + '</b>'];
+  const lines = ['<b>ملخص ' + (state.flow === 'ask' ? 'الطلب' : 'طلب ' + FLOW_NAMES[state.flow]) + '</b>'];
+  if (d.text) lines.push('🙋 ' + escapeHtml_(d.text));
   if (d.company) lines.push('🏢 الشركة: ' + escapeHtml_(d.company));
   if (d.number) lines.push('🔢 الرقم: ' + escapeHtml_(d.number));
   if (d.entity) lines.push('🏛️ الجهة: ' + escapeHtml_(d.entity));
-  if (d.closing) lines.push('📅 الغلق: ' + escapeHtml_(d.closing));
-  if (d.price) lines.push('💰 السعر: ' + escapeHtml_(d.price));
   if (d.reason) lines.push('❓ السبب: ' + escapeHtml_(d.reason));
   if (d.ref) lines.push('🔗 من النشرة: ' + escapeHtml_(d.ref));
   if (state.files.length) lines.push('📎 المرفقات: ' + state.files.length + ' ملف');
-  lines.push('📝 ملاحظات: ' + escapeHtml_(d.notes || 'لا يوجد'));
+  if (state.flow !== 'ask') lines.push('📝 ملاحظات: ' + escapeHtml_(d.notes || 'لا يوجد'));
   return lines.join('\n');
 }
 
@@ -223,11 +234,21 @@ function handleCallback_(user, data, message) {
   }
   if (kind === 'mgr') return handleManager_(user, parts[1], parts.slice(2).join(':'), message);
   if (kind === 'td') return handleTenderButton_(user, parts[1], parts.slice(2).join(':'), message);
+  if (kind === 'sf') return sendFoundFile_(user, value);
 
   const state = getState_(user.chatId);
   if (!state) return showMenu_(user.chatId, 'الجلسة انتهت، ابدي من جديد 👇');
   const step = stepName_(state);
 
+  if (kind === 'loose' && (state.flow === 'loose' || state.flow === 'search') && state.data.text) {
+    const text = state.data.text;
+    if (value === 'search') {
+      startFlow_(user, 'search', {}, true);
+      return runSearch_(user, text);
+    }
+    startFlow_(user, 'ask', { text: text }, true);
+    return next_(user, getState_(user.chatId));
+  }
   if (kind === 'co' && step === 'company') {
     state.data.company = COMPANIES[Number(value)];
     return next_(user, state);
@@ -242,10 +263,6 @@ function handleCallback_(user, data, message) {
     state.data.entity = ent;
     return next_(user, state);
   }
-  if (kind === 'price' && step === 'price') {
-    state.data.price = value;
-    return next_(user, state);
-  }
   if (kind === 'reason' && step === 'reason') {
     const r = APOLOGY_REASONS[Number(value)];
     if (r.indexOf('سبب آخر') === 0) {
@@ -257,14 +274,15 @@ function handleCallback_(user, data, message) {
     return next_(user, state);
   }
   if (kind === 'files' && value === 'done' && step === 'files') {
-    if (!state.files.length) return send_(user.chatId, '⚠️ ما رفعت ولا ملف. ارفع وثيقة الدعوة على الأقل.');
-    return next_(user, state);
+    if (!state.data.text && state.data.base) state.data.text = state.data.base;
+    if (!state.data.text) return send_(user.chatId, '✍️ اكتب شنو تريد بالملفات، وبعدين دوس أرسل.');
+    return submit_(user, state);
   }
   if (kind === 'notes' && value === 'none' && step === 'notes') {
     state.data.notes = '';
     return next_(user, state);
   }
-  if (kind === 'confirm' && step === 'confirm') {
+  if (kind === 'confirm' && (step === 'confirm' || value === 'cancel')) {
     if (value === 'cancel') {
       discardStaged_(state);
       clearState_(user.chatId);
@@ -290,15 +308,31 @@ function handleInput_(user, state, msg) {
   const fileRef = msg.document ? { id: msg.document.file_id, name: msg.document.file_name } :
     msg.photo ? { id: msg.photo[msg.photo.length - 1].file_id, name: 'صورة_' + Date.now() + '.jpg' } : null;
 
-  if (step === 'files' || step === 'photo') {
+  if (state.flow === 'search' && text) return runSearch_(user, text);
+  if (state.flow === 'loose') {
+    clearState_(user.chatId);
+    return handleLoose_(user, msg);
+  }
+  // بخطوة "شنو تريد" إذا أرسل ملف بدل الكتابة، نروح للملفات ونخلي الكتابة بعدين
+  if (step === 'what' && fileRef) state.step = FLOWS.ask.indexOf('files');
+  if (stepName_(state) === 'files' && !fileRef && text) {
+    state.data.text = [state.data.text || state.data.base, text].filter(Boolean).join('\n');
+    setState_(user.chatId, state);
+    return send_(user.chatId, '✅ انضافت للطلب. ارفع ملفات أو دوس أرسل.',
+      [[btn_('📨 أرسل الطلب', 'files:done')], [btn_('❌ إلغاء', 'confirm:cancel')]]);
+  }
+
+  if (stepName_(state) === 'files' || step === 'photo') {
     if (!fileRef) return send_(user.chatId, '📎 أرسل ملف أو صورة، أو دوس الزر إذا خلصت.');
     const blob = downloadTelegramFile_(fileRef.id, fileRef.name);
     const file = childFolder_(rootFolder_(), 'مؤقت').createFile(blob);
     state.files.push(file.getId());
     if (step === 'photo') return next_(user, state);
+    if (msg.caption) state.data.text = [state.data.text || state.data.base, msg.caption.trim()].filter(Boolean).join('\n');
     setState_(user.chatId, state);
-    return send_(user.chatId, '✅ استلمت: ' + escapeHtml_(file.getName()) + '\nارفع غيره، أو دوس الزر إذا خلصت.',
-      [[btn_('✅ انتهيت من الرفع', 'files:done')]]);
+    const tail = state.data.text ? 'ارفع غيره، أو دوس أرسل.' : 'ارفع غيره، واكتب شنو تريد بيه، وبعدين دوس أرسل.';
+    return send_(user.chatId, '✅ استلمت: ' + escapeHtml_(file.getName()) + '\n' + tail,
+      [[btn_('📨 أرسل الطلب', 'files:done')], [btn_('❌ إلغاء', 'confirm:cancel')]]);
   }
 
   if (!text) return send_(user.chatId, 'اكتب جواب، أو /cancel للإلغاء.');
@@ -311,6 +345,9 @@ function handleInput_(user, state, msg) {
   }
 
   switch (step) {
+    case 'what':
+      state.data.text = [state.data.base, text].filter(Boolean).join('\n');
+      return next_(user, state);
     case 'company':
       state.data.company = text;
       return next_(user, state);
@@ -319,12 +356,6 @@ function handleInput_(user, state, msg) {
       return next_(user, state);
     case 'entity':
       state.data.entity = text;
-      return next_(user, state);
-    case 'closing':
-      state.data.closing = text;
-      return next_(user, state);
-    case 'price':
-      state.data.price = text;
       return next_(user, state);
     case 'notes':
       state.data.notes = text;
@@ -358,7 +389,7 @@ function submit_(user, state) {
   const req = {
     id: nextRequestId_(), type: FLOW_NAMES[state.flow], chat_id: user.chatId, requester: user.name,
     company: d.company, number: d.number, entity: d.entity, closing: d.closing,
-    price: d.price, reason: d.reason, notes: [d.notes, d.ref].filter(Boolean).join(' | ')
+    reason: d.reason, notes: [d.text, d.notes, d.ref].filter(Boolean).join(' | ')
   };
   const f = createRequestFolders_(req);
   state.files.forEach(function (id) { DriveApp.getFileById(id).moveTo(f.attachments); });
@@ -390,7 +421,8 @@ function showMine_(user) {
   const mine = listRequests_().filter(function (r) { return r.chat_id === String(user.chatId); }).slice(-5).reverse();
   if (!mine.length) return showMenu_(user.chatId, 'ما عندك طلبات بعد.');
   const lines = mine.map(function (r) {
-    return '• <b>' + r.id + '</b> ' + escapeHtml_(r.type + ' ' + (r.company || '') + ' ' + (r.number || '')) +
+    const what = r.type === FLOW_NAMES.ask ? String(r.notes || '').slice(0, 60) : (r.company || '') + ' ' + (r.number || '');
+    return '• <b>' + r.id + '</b> ' + escapeHtml_(r.type + ' ' + what) +
       '\n   الحالة: ' + escapeHtml_(r.status) + (r.status_note ? ' — ' + escapeHtml_(r.status_note) : '');
   });
   showMenu_(user.chatId, '📋 آخر طلباتك:\n' + lines.join('\n'));
