@@ -11,9 +11,9 @@
 
 ## البوت (مجلد bot/)
 بوت تلغرام على Google Apps Script (حساب الشركة)، يمر عبر وسيط Cloudflare (`bot/cloudflare/worker.js`) حتى يرد فوراً.
-- الكود الكامل بملف واحد: `bot/single/Code.gs` (يتولّد من `bot/apps-script/*.gs` بترتيب Config, Telegram, Storage, Bot, Search, Tenders, Admin, Api, Setup, Poll, Worker). عدّل الملفات الأصلية ثم أعد التوليد.
+- الكود الكامل بملف واحد: `bot/single/Code.gs` (يتولّد من `bot/apps-script/*.gs` بترتيب Config, Telegram, Storage, Bot, Search, Tenders, Admin, Api, Setup, Poll, Worker). عدّل الملفات الأصلية ثم أعد التوليد بـ `python3 bot/build.py`.
 - المستخدم يلصق الكود يدوياً بـ Apps Script وبعدها Deploy ← Manage deployments ← New version. أي تعديل بالكود ما يشتغل لحد ما يسوي هذا. اسأله إذا حدّث.
-- القائمة: اطلب شي (طلب حر + ملفات)، بحث بالأرشيف، مناقصات اليوم، اعتذار، وصل، طلباتي. صاحب البوت (OWNER_ID) عنده 📥 كل الطلبات و👑 الإدارة (/add /remove /manager /watch /unwatch /say /admin). المراقبين (WATCH_IDS) يوصلهم نسخة من كل طلب.
+- القائمة: اطلب شي (طلب حر + ملفات)، بحث بالأرشيف، تصفح الأرشيف، مناقصات اليوم، اعتذار، وصل، طلباتي. صاحب البوت (OWNER_ID) عنده 📥 كل الطلبات و👑 الإدارة (/add /remove /manager /watch /unwatch /say /admin). المراقبين (WATCH_IDS) يوصلهم نسخة من كل طلب.
 - الطلبات تنكتب بجدول «طابور بوت أقصى الفرات» (مجلد 09_طلبات_البوت بالأرشيف).
 - Script Properties: TELEGRAM_TOKEN, TG_SECRET, API_KEY, ALLOWED_IDS, OWNER_ID, MANAGER_ID, WATCH_IDS, PRINTER_EMAIL, WORKER_URL, LAST_BRIEF.
 - الأرشيف (مجلد البحث): `18ypIMmqpsXTlMFNFN0LtX64V0ipAUXSY`.
@@ -43,7 +43,7 @@ JSON للمزامنة: `{brief:{date,body}, tenders:[{key,title,entity,number,go
 - مهمة طلبات البوت كل ساعة (8 الصبح لـ 8 بالليل بغداد): trig_0161m3yADoHD9iKTzKWLiVGW. هي ومهمة الدرايف الأسبوعية بدون موصّل Google Drive لحد ما المستخدم يربطه من claude.ai.
 - الطابعة: انترك موضوعها (المحل عدّل برمجتها وما ترتبط بـ Epson Connect). مو مسوّى: ضبط MANAGER_ID للمدير الحقيقي (/manager).
 - تسمية ملفات الدرايف (2026-10-08): بمسافات بدون underscore حتى يلكاها بحث البوت، مثل «LMD-16 دعوة 16 - 6 عرض تجاري (228) - أقصى الفرات». انغيّر نحو 200 اسم.
-- اقتراح معلّق: بحث أذكى بالبوت (دعوة 16 = LMD-16، والبحث بأسماء المجلدات) وزر تصفح الدعوات.
+- البحث الأذكى (مناقصة/دعوة 16 = LMD-16، والبحث بأسماء المجلدات) وزر 📂 تصفح الأرشيف: بالكود، ينتظرون المستخدم يلصق Code.gs ويسوي New version.
 - آخر تعديلين بالكود (نص التواريخ والأرقام بجدول المناقصات، وخروج البوت من وضع البحث بعد كل بحث) ينتظرون تحديث المستخدم لـ Code.gs وإعادة النشر.
 - مهمة روتين الصبح القديمة: trig_01Mf5hTZcpKUJN8vQ5fmg9Sd. مهمة تنظيف الدرايف الأسبوعية (الخميس) موجودة.
 - أرقام الرسائل الصادرة: التالي 232.

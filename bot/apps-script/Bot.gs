@@ -115,8 +115,9 @@ function handleLoose_(user, msg) {
 function showMenu_(chatId, text) {
   const kb = [
     [btn_('🙋 اطلب شي', 'menu:ask'), btn_('🔍 بحث بالأرشيف', 'menu:search')],
-    [btn_('📊 مناقصات اليوم', 'menu:tenders'), btn_('📝 اعتذار', 'menu:apology')],
-    [btn_('🧾 تسجيل وصل', 'menu:receipt'), btn_('📋 طلباتي', 'menu:mine')]
+    [btn_('📂 تصفح الأرشيف', 'menu:browse'), btn_('📊 مناقصات اليوم', 'menu:tenders')],
+    [btn_('📝 اعتذار', 'menu:apology'), btn_('🧾 تسجيل وصل', 'menu:receipt')],
+    [btn_('📋 طلباتي', 'menu:mine')]
   ];
   if (isOwner_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all'), btn_('👑 الإدارة', 'menu:admin')]);
   else if (canSeeAll_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all')]);
@@ -206,7 +207,7 @@ function ask_(user, state) {
       }
       break;
     case 'query':
-      send_(c, '🔍 اكتب اسم الملف أو كلمة منه (مثال: هوية الغرفة، تأسيس، كفالة 18478).\nإذا تريد ترسل طلب لـ Claude مو بحث، دوس /start وبعدين «اطلب شي».');
+      send_(c, '🔍 اكتب اسم الملف أو كلمة منه (مثال: دعوة 16، هوية الغرفة، كفالة 18478).\nإذا تريد ترسل طلب لـ Claude مو بحث، دوس /start وبعدين «اطلب شي».');
       break;
     case 'company':
       send_(c, '🏢 لأي شركة؟', rows_(COMPANIES.map(function (n, i) { return btn_(n, 'co:' + i); }), 2));
@@ -273,11 +274,16 @@ function handleCallback_(user, data, message) {
     if (value === 'tenders') return showTenders_(user);
     if (value === 'all') return showAll_(user);
     if (value === 'admin') return showAdmin_(user);
+    if (value === 'browse') {
+      clearState_(user.chatId);
+      return browseFolder_(user, ARCHIVE_FOLDER_ID);
+    }
     return startFlow_(user, value);
   }
   if (kind === 'mgr') return handleManager_(user, parts[1], parts.slice(2).join(':'), message);
   if (kind === 'td') return handleTenderButton_(user, parts[1], parts.slice(2).join(':'), message);
   if (kind === 'sf') return sendFoundFile_(user, value);
+  if (kind === 'fd') return browseFolder_(user, value);
   if (kind === 'rq' && parts[1] === 'files') return sendRequestFiles_(user, parts.slice(2).join(':'));
 
   const state = getState_(user.chatId);
