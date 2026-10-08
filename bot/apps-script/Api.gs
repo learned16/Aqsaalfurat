@@ -7,6 +7,8 @@
  *   upload   {id, name, mime, b64}           → يحفظ ملف نتيجة بمجلد "النتائج"
  *   deliver  {id, message, to_manager?}      → يرسل ملفات النتائج لمقدم الطلب، وللمدير بأزرار الطباعة
  *   notify   {target, text}                  → رسالة: "manager" أو "all" أو chat_id
+ *   tenders_sync {tenders, brief?, push?}    → يحدّث قائمة المناقصات اليومية، وpush = "manager" أو "all" يرسل النشرة
+ *   tenders_list {}                          → قائمة المناقصات بالجدول
  */
 function handleApi_(d) {
   switch (d.action) {
@@ -70,6 +72,16 @@ function handleApi_(d) {
       targets.forEach(function (t) { send_(t, d.text); });
       return { sent: targets.length };
     }
+
+    case 'tenders_sync': {
+      const res = syncTenders_(d.tenders || []);
+      if (d.brief) setProp_('LAST_BRIEF', JSON.stringify(d.brief));
+      if (d.push) res.pushed = pushBrief_(d.push);
+      return res;
+    }
+
+    case 'tenders_list':
+      return { tenders: listTenders_() };
 
     default:
       throw new Error('أمر غير معروف: ' + d.action);

@@ -102,6 +102,7 @@ function handleUpdate_(u) {
 function showMenu_(chatId, text) {
   send_(chatId, text, [
     [btn_('📑 إنشاء مناقصة', 'menu:tender'), btn_('📝 اعتذار', 'menu:apology')],
+    [btn_('📊 مناقصات اليوم', 'menu:tenders')],
     [btn_('🧾 تسجيل وصل', 'menu:receipt'), btn_('📋 طلباتي', 'menu:mine')]
   ]);
 }
@@ -120,11 +121,14 @@ const FLOW_NAMES = { tender: 'مناقصة', apology: 'اعتذار', receipt: '
 
 const ENTITIES = ['كهرباء الوسط', 'غاز الشمال', 'نفط الشمال', 'مصفى الشمال', 'أخرى (أكتبها)'];
 
-function startFlow_(user, flow) {
-  const state = { flow: flow, step: 0, data: {}, files: [] };
+function startFlow_(user, flow, prefill) {
+  const state = { flow: flow, step: 0, data: prefill || {}, files: [] };
   setState_(user.chatId, state);
   ask_(user, state);
 }
+
+// خطوات تنعبر إذا جوابها موجود من قبل (مثلاً من مناقصة بنشرة اليوم)
+const PREFILLABLE = ['number', 'entity', 'closing'];
 
 function stepName_(state) {
   const steps = FLOWS[state.flow];
@@ -139,7 +143,9 @@ function next_(user, state) {
 
 function ask_(user, state) {
   const c = user.chatId;
-  switch (stepName_(state)) {
+  const step = stepName_(state);
+  if (PREFILLABLE.indexOf(step) >= 0 && state.data[step]) return next_(user, state);
+  switch (step) {
     case 'company':
       send_(c, '🏢 لأي شركة؟', rows_(COMPANIES.map(function (n, i) { return btn_(n, 'co:' + i); }), 2));
       break;
@@ -195,6 +201,7 @@ function summary_(state) {
   if (d.closing) lines.push('📅 الغلق: ' + escapeHtml_(d.closing));
   if (d.price) lines.push('💰 السعر: ' + escapeHtml_(d.price));
   if (d.reason) lines.push('❓ السبب: ' + escapeHtml_(d.reason));
+  if (d.ref) lines.push('🔗 من النشرة: ' + escapeHtml_(d.ref));
   if (state.files.length) lines.push('📎 المرفقات: ' + state.files.length + ' ملف');
   lines.push('📝 ملاحظات: ' + escapeHtml_(d.notes || 'لا يوجد'));
   return lines.join('\n');
@@ -211,9 +218,11 @@ function handleCallback_(user, data, message) {
 
   if (kind === 'menu') {
     if (value === 'mine') return showMine_(user);
+    if (value === 'tenders') return showTenders_(user);
     return startFlow_(user, value);
   }
   if (kind === 'mgr') return handleManager_(user, parts[1], parts.slice(2).join(':'), message);
+  if (kind === 'td') return handleTenderButton_(user, parts[1], parts.slice(2).join(':'), message);
 
   const state = getState_(user.chatId);
   if (!state) return showMenu_(user.chatId, 'الجلسة انتهت، ابدي من جديد 👇');
@@ -349,7 +358,7 @@ function submit_(user, state) {
   const req = {
     id: nextRequestId_(), type: FLOW_NAMES[state.flow], chat_id: user.chatId, requester: user.name,
     company: d.company, number: d.number, entity: d.entity, closing: d.closing,
-    price: d.price, reason: d.reason, notes: d.notes
+    price: d.price, reason: d.reason, notes: [d.notes, d.ref].filter(Boolean).join(' | ')
   };
   const f = createRequestFolders_(req);
   state.files.forEach(function (id) { DriveApp.getFileById(id).moveTo(f.attachments); });

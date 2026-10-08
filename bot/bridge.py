@@ -12,6 +12,8 @@
   bridge.py upload <id> <file>...             يرفع ملفات النتائج لمجلد "النتائج"
   bridge.py deliver <id> [--manager] [--msg النص]
   bridge.py notify <manager|all|chat_id> <text>
+  bridge.py tenders <file.json> [--push manager|all]   يحدّث مناقصات اليوم (JSON فيه tenders وbrief)
+  bridge.py tenders-list
 
 الملفات ترتفع من هنا مباشرة كـ base64، فما تمر على المحادثة.
 """
@@ -101,6 +103,14 @@ def main(argv):
         out = call({"action": "deliver", "id": args[0], "message": msg, "to_manager": manager})
     elif cmd == "notify":
         out = call({"action": "notify", "target": args[0], "text": " ".join(args[1:])})
+    elif cmd == "tenders":
+        push = option(args, "--push")
+        with open(args[0], encoding="utf-8") as fh:
+            data = json.load(fh)
+        out = call({"action": "tenders_sync", "tenders": data.get("tenders", []),
+                    "brief": data.get("brief"), "push": push or False})
+    elif cmd == "tenders-list":
+        out = call({"action": "tenders_list"})["tenders"]
     else:
         sys.exit("أمر غير معروف: " + cmd)
 

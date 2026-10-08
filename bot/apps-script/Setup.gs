@@ -35,6 +35,7 @@ function setup() {
     rec.setRightToLeft(true);
     props.setProperty('SHEET_ID', ss.getId());
   }
+  tendersSheet_();
   console.log('تم. المجلد: ' + root.getUrl());
 }
 
