@@ -6,6 +6,8 @@
  *   TG_SECRET        كلمة سر عشوائية تنحط برابط الـ webhook حتى ما أحد غير تلغرام يرسل للسكربت
  *   API_KEY          كلمة سر عشوائية يستعملها Claude حتى يقرا الطابور ويرفع النتائج
  *   ALLOWED_IDS      معرّفات التلغرام المسموح إلها، مفصولة بفارزة (مثال: 11111111,22222222)
+ *   OWNER_ID         معرّف صاحب البوت: أعلى صلاحية (كل شي يشوفه المدير والمراقب، ويوافق ويطبع،
+ *                    ويضيف ويشيل الموظفين ويغيّر المدير من البوت). ما يتغير إلا من Script Properties.
  *   MANAGER_ID       معرّف تلغرام المدير (يستلم أزرار الموافقة والطباعة)
  *   WATCH_IDS        معرّفات تشوف كل شي يرسله الموظفين (كل طلب ويه ملفاته، وكل بحث)، مفصولة بفارزة
  *   PRINTER_EMAIL    إيميل طابعة Epson Connect (ينكتب بعد تسجيل الطابعة)
@@ -66,8 +68,22 @@ function allowedIds_() {
   return idList_('ALLOWED_IDS');
 }
 
+/** المراقبين، وصاحب البوت دائماً وياهم. */
 function watchIds_() {
-  return idList_('WATCH_IDS');
+  const ids = idList_('WATCH_IDS');
+  const owner = prop_('OWNER_ID');
+  if (owner && ids.indexOf(owner) < 0) ids.unshift(owner);
+  return ids;
+}
+
+function isOwner_(id) {
+  return !!prop_('OWNER_ID') && String(id) === prop_('OWNER_ID');
+}
+
+/** المدير أو صاحب البوت (الموافقة والطباعة). */
+function isManager_(id) {
+  id = String(id);
+  return id === prop_('MANAGER_ID') || isOwner_(id);
 }
 
 /** المراقب أو المدير يشوف كل الطلبات. */

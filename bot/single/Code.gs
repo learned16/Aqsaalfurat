@@ -10,6 +10,8 @@
  *   TG_SECRET        كلمة سر عشوائية تنحط برابط الـ webhook حتى ما أحد غير تلغرام يرسل للسكربت
  *   API_KEY          كلمة سر عشوائية يستعملها Claude حتى يقرا الطابور ويرفع النتائج
  *   ALLOWED_IDS      معرّفات التلغرام المسموح إلها، مفصولة بفارزة (مثال: 11111111,22222222)
+ *   OWNER_ID         معرّف صاحب البوت: أعلى صلاحية (كل شي يشوفه المدير والمراقب، ويوافق ويطبع،
+ *                    ويضيف ويشيل الموظفين ويغيّر المدير من البوت). ما يتغير إلا من Script Properties.
  *   MANAGER_ID       معرّف تلغرام المدير (يستلم أزرار الموافقة والطباعة)
  *   WATCH_IDS        معرّفات تشوف كل شي يرسله الموظفين (كل طلب ويه ملفاته، وكل بحث)، مفصولة بفارزة
  *   PRINTER_EMAIL    إيميل طابعة Epson Connect (ينكتب بعد تسجيل الطابعة)
@@ -70,8 +72,22 @@ function allowedIds_() {
   return idList_('ALLOWED_IDS');
 }
 
+/** المراقبين، وصاحب البوت دائماً وياهم. */
 function watchIds_() {
-  return idList_('WATCH_IDS');
+  const ids = idList_('WATCH_IDS');
+  const owner = prop_('OWNER_ID');
+  if (owner && ids.indexOf(owner) < 0) ids.unshift(owner);
+  return ids;
+}
+
+function isOwner_(id) {
+  return !!prop_('OWNER_ID') && String(id) === prop_('OWNER_ID');
+}
+
+/** المدير أو صاحب البوت (الموافقة والطباعة). */
+function isManager_(id) {
+  id = String(id);
+  return id === prop_('MANAGER_ID') || isOwner_(id);
 }
 
 /** المراقب أو المدير يشوف كل الطلبات. */
@@ -352,6 +368,7 @@ function handleUpdate_(u) {
   }
 
   const user = { id: userId, chatId: chatId, name: [from.first_name, from.last_name].filter(Boolean).join(' ') };
+  if (msg && isOwner_(userId) && handleOwnerCommand_(user, (msg.text || '').trim())) return;
 
   if (cb) {
     answerCallback_(cb.id);
@@ -395,7 +412,8 @@ function showMenu_(chatId, text) {
     [btn_('📊 مناقصات اليوم', 'menu:tenders'), btn_('📝 اعتذار', 'menu:apology')],
     [btn_('🧾 تسجيل وصل', 'menu:receipt'), btn_('📋 طلباتي', 'menu:mine')]
   ];
-  if (canSeeAll_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all')]);
+  if (isOwner_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all'), btn_('👑 الإدارة', 'menu:admin')]);
+  else if (canSeeAll_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all')]);
   send_(chatId, text, kb);
 }
 
@@ -548,6 +566,7 @@ function handleCallback_(user, data, message) {
     if (value === 'mine') return showMine_(user);
     if (value === 'tenders') return showTenders_(user);
     if (value === 'all') return showAll_(user);
+    if (value === 'admin') return showAdmin_(user);
     return startFlow_(user, value);
   }
   if (kind === 'mgr') return handleManager_(user, parts[1], parts.slice(2).join(':'), message);
@@ -761,7 +780,7 @@ function showMine_(user) {
 // ---------------------------------------------------------------------------
 
 function handleManager_(user, action, id, message) {
-  if (user.id !== prop_('MANAGER_ID')) return send_(user.chatId, '⛔ الموافقة للمدير بس.');
+  if (!isManager_(user.id)) return send_(user.chatId, '⛔ الموافقة للمدير بس.');
   const found = findRequest_(id);
   if (!found) return send_(user.chatId, 'الطلب ' + escapeHtml_(id) + ' مو موجود.');
   const req = found.req;
@@ -1086,6 +1105,94 @@ function pushBrief_(target) {
   return targets.length;
 }
 
+// ===== Admin.gs =====
+/**
+ * لوحة صاحب البوت (OWNER_ID): أوامر تنكتب بالبوت مباشرة.
+ *
+ *   /admin            اللوحة: الموظفين والمدير والمراقبين والطابور
+ *   /add 123          يضيف موظف
+ *   /remove 123       يشيل موظف (ومن المراقبين إذا موجود)
+ *   /manager 123      يغيّر المدير
+ *   /watch 123        يضيف مراقب      /unwatch 123   يشيله
+ *   /say نص           رسالة لكل الموظفين والمدير
+ */
+
+function setIdList_(name, ids) {
+  setProp_(name, ids.filter(function (t, i, a) { return t && a.indexOf(t) === i; }).join(','));
+}
+
+function showAdmin_(user) {
+  if (!isOwner_(user.id)) return showMenu_(user.chatId, '⛔ هذا لصاحب البوت بس.');
+  const counts = {};
+  listRequests_('').forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const queue = Object.keys(counts).map(function (k) { return k + ': ' + counts[k]; }).join(' · ') || 'فارغ';
+  const staff = allowedIds_();
+  showMenu_(user.chatId, [
+    '👑 <b>لوحة صاحب البوت</b>',
+    '👔 المدير: <code>' + escapeHtml_(prop_('MANAGER_ID') || 'غير محدد') + '</code>',
+    '👥 الموظفين (' + staff.length + '): ' + (staff.map(function (s) { return '<code>' + s + '</code>'; }).join('، ') || 'لا يوجد'),
+    '👁️ المراقبين: ' + (idList_('WATCH_IDS').map(function (s) { return '<code>' + s + '</code>'; }).join('، ') || 'بس إنت'),
+    '📋 الطابور: ' + escapeHtml_(queue),
+    '',
+    '<b>الأوامر:</b>',
+    '/add 123 — إضافة موظف',
+    '/remove 123 — شيل موظف',
+    '/manager 123 — تغيير المدير',
+    '/watch 123 · /unwatch 123 — المراقبين',
+    '/say نص — رسالة للكل'
+  ].join('\n'));
+}
+
+/** يرجّع true إذا الرسالة أمر من أوامر صاحب البوت وانعالجت. */
+function handleOwnerCommand_(user, text) {
+  const m = text.match(/^\/(admin|add|remove|manager|watch|unwatch|say)(?:@\w+)?(?:\s+([\s\S]+))?$/);
+  if (!m) return false;
+  const cmd = m[1];
+  const arg = (m[2] || '').trim();
+  const id = arg.replace(/[^\d-]/g, '');
+
+  if (cmd === 'admin') { showAdmin_(user); return true; }
+  if (cmd === 'say') {
+    if (!arg) { send_(user.chatId, 'اكتب الرسالة بعد الأمر: /say النص'); return true; }
+    const targets = allowedIds_().concat([prop_('MANAGER_ID')])
+      .filter(function (t, i, a) { return t && t !== user.id && a.indexOf(t) === i; });
+    targets.forEach(function (t) { send_(t, '📢 ' + escapeHtml_(arg)); });
+    send_(user.chatId, '📢 انرسلت لـ ' + targets.length + ' شخص.');
+    return true;
+  }
+  if (!id) { send_(user.chatId, 'اكتب المعرّف بعد الأمر، مثال: /' + cmd + ' 123456789'); return true; }
+  if (id === user.id) { send_(user.chatId, 'هذا معرّفك إنت، صلاحيتك أعلى من الكل أصلاً 👑'); return true; }
+
+  switch (cmd) {
+    case 'add':
+      setIdList_('ALLOWED_IDS', allowedIds_().concat([id]));
+      send_(user.chatId, '✅ انضاف الموظف <code>' + id + '</code>');
+      send_(id, '✅ صار عندك وصول لبوت أقصى الفرات. اكتب /start');
+      break;
+    case 'remove':
+      setIdList_('ALLOWED_IDS', allowedIds_().filter(function (x) { return x !== id; }));
+      setIdList_('WATCH_IDS', idList_('WATCH_IDS').filter(function (x) { return x !== id; }));
+      clearState_(id);
+      send_(user.chatId, '🗑️ انشال <code>' + id + '</code>' +
+        (id === prop_('MANAGER_ID') ? '\n⚠️ هذا المدير، وبعده مدير. غيّره بـ /manager' : ''));
+      break;
+    case 'manager':
+      setProp_('MANAGER_ID', id);
+      send_(user.chatId, '👔 صار المدير <code>' + id + '</code>');
+      send_(id, '👔 صرت مدير ببوت أقصى الفرات: توصلك الطلبات وأزرار الطباعة. اكتب /start');
+      break;
+    case 'watch':
+      setIdList_('WATCH_IDS', idList_('WATCH_IDS').concat([id]));
+      send_(user.chatId, '👁️ صار مراقب <code>' + id + '</code>');
+      break;
+    case 'unwatch':
+      setIdList_('WATCH_IDS', idList_('WATCH_IDS').filter(function (x) { return x !== id; }));
+      send_(user.chatId, '👁️ انشال من المراقبين <code>' + id + '</code>');
+      break;
+  }
+  return true;
+}
+
 // ===== Api.gs =====
 /**
  * الأوامر اللي يستعملها Claude (عن طريق bridge.py) — كلها تحتاج API_KEY.
@@ -1145,6 +1252,13 @@ function handleApi_(d) {
         send_(mgr, '👆 <b>' + req.id + '</b> ' + escapeHtml_(req.type + ' ' + (req.company || '') + ' ' + (req.number || '')) +
           '\n' + escapeHtml_(d.message || '') + '\nإذا عاجبك دوس اطبعه.',
           [[btn_('✅ اطبعه', 'mgr:ok:' + req.id), btn_('↩️ رجّعه للتعديل', 'mgr:no:' + req.id)]]);
+        // صاحب البوت يستلم نفس الملفات والأزرار
+        const owner = prop_('OWNER_ID');
+        if (owner && owner !== mgr && owner !== req.chat_id) {
+          ids.forEach(function (id) { sendDriveFile_(owner, id); });
+          send_(owner, '👑 نسخة لك: <b>' + req.id + '</b> بانتظار موافقة المدير.\n' + escapeHtml_(d.message || ''),
+            [[btn_('✅ اطبعه', 'mgr:ok:' + req.id), btn_('↩️ رجّعه للتعديل', 'mgr:no:' + req.id)]]);
+        }
         updateStatus_(req.id, STATUS.WAITING_MANAGER, '');
       } else {
         updateStatus_(req.id, STATUS.READY, '');

@@ -56,6 +56,13 @@ function handleApi_(d) {
         send_(mgr, '👆 <b>' + req.id + '</b> ' + escapeHtml_(req.type + ' ' + (req.company || '') + ' ' + (req.number || '')) +
           '\n' + escapeHtml_(d.message || '') + '\nإذا عاجبك دوس اطبعه.',
           [[btn_('✅ اطبعه', 'mgr:ok:' + req.id), btn_('↩️ رجّعه للتعديل', 'mgr:no:' + req.id)]]);
+        // صاحب البوت يستلم نفس الملفات والأزرار
+        const owner = prop_('OWNER_ID');
+        if (owner && owner !== mgr && owner !== req.chat_id) {
+          ids.forEach(function (id) { sendDriveFile_(owner, id); });
+          send_(owner, '👑 نسخة لك: <b>' + req.id + '</b> بانتظار موافقة المدير.\n' + escapeHtml_(d.message || ''),
+            [[btn_('✅ اطبعه', 'mgr:ok:' + req.id), btn_('↩️ رجّعه للتعديل', 'mgr:no:' + req.id)]]);
+        }
         updateStatus_(req.id, STATUS.WAITING_MANAGER, '');
       } else {
         updateStatus_(req.id, STATUS.READY, '');

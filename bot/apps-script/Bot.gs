@@ -74,6 +74,7 @@ function handleUpdate_(u) {
   }
 
   const user = { id: userId, chatId: chatId, name: [from.first_name, from.last_name].filter(Boolean).join(' ') };
+  if (msg && isOwner_(userId) && handleOwnerCommand_(user, (msg.text || '').trim())) return;
 
   if (cb) {
     answerCallback_(cb.id);
@@ -117,7 +118,8 @@ function showMenu_(chatId, text) {
     [btn_('📊 مناقصات اليوم', 'menu:tenders'), btn_('📝 اعتذار', 'menu:apology')],
     [btn_('🧾 تسجيل وصل', 'menu:receipt'), btn_('📋 طلباتي', 'menu:mine')]
   ];
-  if (canSeeAll_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all')]);
+  if (isOwner_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all'), btn_('👑 الإدارة', 'menu:admin')]);
+  else if (canSeeAll_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all')]);
   send_(chatId, text, kb);
 }
 
@@ -270,6 +272,7 @@ function handleCallback_(user, data, message) {
     if (value === 'mine') return showMine_(user);
     if (value === 'tenders') return showTenders_(user);
     if (value === 'all') return showAll_(user);
+    if (value === 'admin') return showAdmin_(user);
     return startFlow_(user, value);
   }
   if (kind === 'mgr') return handleManager_(user, parts[1], parts.slice(2).join(':'), message);
@@ -483,7 +486,7 @@ function showMine_(user) {
 // ---------------------------------------------------------------------------
 
 function handleManager_(user, action, id, message) {
-  if (user.id !== prop_('MANAGER_ID')) return send_(user.chatId, '⛔ الموافقة للمدير بس.');
+  if (!isManager_(user.id)) return send_(user.chatId, '⛔ الموافقة للمدير بس.');
   const found = findRequest_(id);
   if (!found) return send_(user.chatId, 'الطلب ' + escapeHtml_(id) + ' مو موجود.');
   const req = found.req;
