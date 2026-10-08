@@ -206,7 +206,7 @@ function ask_(user, state) {
       }
       break;
     case 'query':
-      send_(c, '🔍 اكتب اسم الملف أو كلمة منه (مثال: هوية الغرفة، تأسيس، كفالة 18478).');
+      send_(c, '🔍 اكتب اسم الملف أو كلمة منه (مثال: هوية الغرفة، تأسيس، كفالة 18478).\nإذا تريد ترسل طلب لـ Claude مو بحث، دوس /start وبعدين «اطلب شي».');
       break;
     case 'company':
       send_(c, '🏢 لأي شركة؟', rows_(COMPANIES.map(function (n, i) { return btn_(n, 'co:' + i); }), 2));

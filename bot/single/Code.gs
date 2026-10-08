@@ -500,7 +500,7 @@ function ask_(user, state) {
       }
       break;
     case 'query':
-      send_(c, '🔍 اكتب اسم الملف أو كلمة منه (مثال: هوية الغرفة، تأسيس، كفالة 18478).');
+      send_(c, '🔍 اكتب اسم الملف أو كلمة منه (مثال: هوية الغرفة، تأسيس، كفالة 18478).\nإذا تريد ترسل طلب لـ Claude مو بحث، دوس /start وبعدين «اطلب شي».');
       break;
     case 'company':
       send_(c, '🏢 لأي شركة؟', rows_(COMPANIES.map(function (n, i) { return btn_(n, 'co:' + i); }), 2));
@@ -890,8 +890,9 @@ function titleScore_(name, words) {
 function runSearch_(user, text) {
   const found = searchArchive_(text);
   const again = [[btn_('🔍 بحث ثاني', 'menu:search'), btn_('🙋 اطلبه من Claude', 'loose:ask')]];
-  // نبقى بوضع البحث (كل كلمة جديدة بحث جديد)، ونحفظ النص حتى زر "اطلبه من Claude" يرسله طلب
-  setState_(user.chatId, { flow: 'search', step: 0, data: { text: 'دوّرلي على: ' + text }, files: [] });
+  // نحفظ النص حتى زر "اطلبه من Claude" يرسله طلب. بعد البحث ما نبقى بوضع البحث،
+  // فأي رسالة جاية تنسأل: طلب لو بحث؟
+  setState_(user.chatId, { flow: 'loose', step: 0, data: { text: text }, files: [] });
   if (!found.length) {
     return send_(user.chatId, '🔍 ما لكيت شي بـ «' + escapeHtml_(text) + '».\nجرّب كلمة ثانية، أو اطلبه من Claude.', again);
   }

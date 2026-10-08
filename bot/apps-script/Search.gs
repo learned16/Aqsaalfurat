@@ -56,8 +56,9 @@ function titleScore_(name, words) {
 function runSearch_(user, text) {
   const found = searchArchive_(text);
   const again = [[btn_('🔍 بحث ثاني', 'menu:search'), btn_('🙋 اطلبه من Claude', 'loose:ask')]];
-  // نبقى بوضع البحث (كل كلمة جديدة بحث جديد)، ونحفظ النص حتى زر "اطلبه من Claude" يرسله طلب
-  setState_(user.chatId, { flow: 'search', step: 0, data: { text: 'دوّرلي على: ' + text }, files: [] });
+  // نحفظ النص حتى زر "اطلبه من Claude" يرسله طلب. بعد البحث ما نبقى بوضع البحث،
+  // فأي رسالة جاية تنسأل: طلب لو بحث؟
+  setState_(user.chatId, { flow: 'loose', step: 0, data: { text: text }, files: [] });
   if (!found.length) {
     return send_(user.chatId, '🔍 ما لكيت شي بـ «' + escapeHtml_(text) + '».\nجرّب كلمة ثانية، أو اطلبه من Claude.', again);
   }
