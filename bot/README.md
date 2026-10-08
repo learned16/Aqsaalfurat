@@ -45,7 +45,8 @@
    - Who has access: **Anyone**
 3. انسخ رابط الـ Web app (ينتهي بـ `/exec`).
 4. ضيفه بـ Script Properties باسم `WEBAPP_URL`.
-5. شغّل `setWebhook`، وبعدها `showConfig`.
+5. شغّل `startPolling` (البوت يسحب الرسائل كل دقيقة)، وبعدها `showConfig`.
+   - ليش مو `setWebhook`: رابط Apps Script يرد على تلغرام بتحويل 302، وتلغرام يعتبره فشل ويوقف التسليم.
 6. من **Triggers** ضيف مشغّل يومي للدالة `cleanTemp`.
 
 ### 5. اربط Claude
@@ -95,3 +96,4 @@ python3 bridge.py tenders today.json --push manager   # يحدّث مناقصا�
 - تلغرام ما ينزّل ملفات أكبر من 20 ميغا. الملف الأكبر يترفع للدرايف يدوياً.
 - Epson Email Print: لحد 10 مرفقات و20 ميغا بالمجموع، وPDF بس.
 - Claude يفحص الطابور كل ساعة، فالطلب ما يكون فوري.
+- البوت يرد خلال دقيقة (السحب كل دقيقة)، مو فوراً.
