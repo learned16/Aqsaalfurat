@@ -7,6 +7,7 @@
  *   API_KEY          كلمة سر عشوائية يستعملها Claude حتى يقرا الطابور ويرفع النتائج
  *   ALLOWED_IDS      معرّفات التلغرام المسموح إلها، مفصولة بفارزة (مثال: 11111111,22222222)
  *   MANAGER_ID       معرّف تلغرام المدير (يستلم أزرار الموافقة والطباعة)
+ *   WATCH_IDS        معرّفات تشوف كل شي يرسله الموظفين (كل طلب ويه ملفاته، وكل بحث)، مفصولة بفارزة
  *   PRINTER_EMAIL    إيميل طابعة Epson Connect (ينكتب بعد تسجيل الطابعة)
  *   ROOT_FOLDER_ID   يتعبى وحده من دالة setup()
  *   SHEET_ID         يتعبى وحده من دالة setup()
@@ -57,6 +58,20 @@ function setProp_(name, value) {
   PropertiesService.getScriptProperties().setProperty(name, String(value));
 }
 
+function idList_(name) {
+  return prop_(name).split(',').map(function (s) { return s.trim(); }).filter(String);
+}
+
 function allowedIds_() {
-  return prop_('ALLOWED_IDS').split(',').map(function (s) { return s.trim(); }).filter(String);
+  return idList_('ALLOWED_IDS');
+}
+
+function watchIds_() {
+  return idList_('WATCH_IDS');
+}
+
+/** المراقب أو المدير يشوف كل الطلبات. */
+function canSeeAll_(id) {
+  id = String(id);
+  return watchIds_().indexOf(id) >= 0 || id === prop_('MANAGER_ID');
 }

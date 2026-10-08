@@ -68,7 +68,7 @@ function handleUpdate_(u) {
     send_(chatId, 'معرّفك بالتلغرام: <code>' + userId + '</code>');
     return;
   }
-  if (allowedIds_().indexOf(userId) < 0 && userId !== prop_('MANAGER_ID')) {
+  if (allowedIds_().indexOf(userId) < 0 && !canSeeAll_(userId)) {
     send_(chatId, '⛔ هذا البوت خاص بشركة أقصى الفرات.\nمعرّفك: <code>' + userId + '</code>\nدزّه للمسؤول حتى يضيفك.');
     return;
   }
@@ -93,6 +93,7 @@ function handleUpdate_(u) {
 
   const state = getState_(chatId);
   if (!state) return handleLoose_(user, msg);
+  if (state.flow === 'search' && (msg.text || '').trim()) watchLog_(user, '🔍 بحث: ' + escapeHtml_(msg.text.trim()));
   handleInput_(user, state, msg);
 }
 
@@ -111,11 +112,49 @@ function handleLoose_(user, msg) {
 }
 
 function showMenu_(chatId, text) {
-  send_(chatId, text, [
+  const kb = [
     [btn_('🙋 اطلب شي', 'menu:ask'), btn_('🔍 بحث بالأرشيف', 'menu:search')],
     [btn_('📊 مناقصات اليوم', 'menu:tenders'), btn_('📝 اعتذار', 'menu:apology')],
     [btn_('🧾 تسجيل وصل', 'menu:receipt'), btn_('📋 طلباتي', 'menu:mine')]
-  ]);
+  ];
+  if (canSeeAll_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all')]);
+  send_(chatId, text, kb);
+}
+
+/** يرسل سطر للمراقبين (WATCH_IDS) بكل شي يسويه الموظفين، إلا إذا المراقب نفسه هو اللي سواه. */
+function watchLog_(user, text) {
+  watchIds_().forEach(function (id) {
+    if (id !== user.id) send_(id, '👁️ ' + escapeHtml_(user.name) + ' — ' + text);
+  });
+}
+
+/** آخر 10 طلبات من كل الموظفين، ويه زر يجيب ملفات كل طلب. */
+function showAll_(user) {
+  if (!canSeeAll_(user.id)) return showMenu_(user.chatId, '⛔ هذا للمدير والمراقب بس.');
+  const all = listRequests_('').slice(-10).reverse();
+  if (!all.length) return showMenu_(user.chatId, 'ماكو طلبات بعد.');
+  all.forEach(function (r) {
+    const what = r.type === FLOW_NAMES.ask ? String(r.notes || '') : [r.company, r.number, r.reason, r.notes].filter(Boolean).join(' · ');
+    send_(user.chatId, '<b>' + r.id + '</b> · ' + escapeHtml_(r.requester) + ' · ' + escapeHtml_(r.created) +
+      '\n' + escapeHtml_(r.type) + ': ' + escapeHtml_(what.slice(0, 300)) +
+      '\nالحالة: ' + escapeHtml_(r.status) + (r.status_note ? ' — ' + escapeHtml_(r.status_note) : ''),
+      [[btn_('📎 ملفاته', 'rq:files:' + r.id)]]);
+  });
+  showMenu_(user.chatId, '📥 آخر ' + all.length + ' طلبات.');
+}
+
+/** يرسل مرفقات الطلب ونتائجه للمراقب أو المدير. */
+function sendRequestFiles_(user, id) {
+  if (!canSeeAll_(user.id)) return;
+  const req = mustFind_(id);
+  const sent = [['مرفقات', DriveApp.getFolderById(req.folder_id).getFoldersByName('مرفقات').next()],
+    ['النتائج', DriveApp.getFolderById(req.results_folder_id)]].map(function (pair) {
+    const it = pair[1].getFiles();
+    let n = 0;
+    while (it.hasNext()) { sendDriveFile_(user.chatId, it.next().getId(), id + ' · ' + pair[0]); n++; }
+    return n;
+  });
+  if (!sent[0] && !sent[1]) send_(user.chatId, 'الطلب ' + id + ' ما بيه ملفات.');
 }
 
 // ---------------------------------------------------------------------------
@@ -230,11 +269,13 @@ function handleCallback_(user, data, message) {
   if (kind === 'menu') {
     if (value === 'mine') return showMine_(user);
     if (value === 'tenders') return showTenders_(user);
+    if (value === 'all') return showAll_(user);
     return startFlow_(user, value);
   }
   if (kind === 'mgr') return handleManager_(user, parts[1], parts.slice(2).join(':'), message);
   if (kind === 'td') return handleTenderButton_(user, parts[1], parts.slice(2).join(':'), message);
   if (kind === 'sf') return sendFoundFile_(user, value);
+  if (kind === 'rq' && parts[1] === 'files') return sendRequestFiles_(user, parts.slice(2).join(':'));
 
   const state = getState_(user.chatId);
   if (!state) return showMenu_(user.chatId, 'الجلسة انتهت، ابدي من جديد 👇');
@@ -243,6 +284,7 @@ function handleCallback_(user, data, message) {
   if (kind === 'loose' && (state.flow === 'loose' || state.flow === 'search') && state.data.text) {
     const text = state.data.text;
     if (value === 'search') {
+      watchLog_(user, '🔍 بحث: ' + escapeHtml_(text));
       startFlow_(user, 'search', {}, true);
       return runSearch_(user, text);
     }
@@ -399,10 +441,15 @@ function submit_(user, state) {
   clearState_(user.chatId);
 
   send_(user.chatId, '✅ انرسل الطلب <b>' + req.id + '</b>\nClaude يشتغل عليه، والملفات توصلك هنا من تجهز (عادة خلال ساعة).');
+  const note = '📥 طلب جديد ' + req.id + ' من ' + escapeHtml_(user.name) + '\n' + summary_(state);
   const mgr = prop_('MANAGER_ID');
-  if (mgr && mgr !== user.id) {
-    send_(mgr, '📥 طلب جديد ' + req.id + ' من ' + escapeHtml_(user.name) + '\n' + summary_(state));
-  }
+  if (mgr && mgr !== user.id) send_(mgr, note);
+  // المراقبين يشوفون الطلب ويه ملفاته
+  watchIds_().forEach(function (id) {
+    if (id === user.id) return;
+    if (id !== mgr) send_(id, note);
+    state.files.forEach(function (fid) { sendDriveFile_(id, fid, req.id); });
+  });
 }
 
 function saveReceipt_(user, state) {
@@ -413,6 +460,9 @@ function saveReceipt_(user, state) {
   file.setName(Utilities.formatDate(new Date(), 'Asia/Baghdad', 'yyyy-MM-dd') + '_' + d.amount + '_' +
     d.description.slice(0, 40).replace(/[\/\\]/g, '-') + ext);
   appendReceipt_({ requester: user.name, amount: d.amount, description: d.description, url: file.getUrl() });
+  watchIds_().forEach(function (id) {
+    if (id !== user.id) sendDriveFile_(id, file.getId(), '🧾 ' + user.name + ' — ' + d.amount + ' دينار — ' + d.description);
+  });
   clearState_(user.chatId);
   showMenu_(user.chatId, '🧾 انسجل الوصل: ' + d.amount.toLocaleString('en-US') + ' دينار\n' + escapeHtml_(d.description));
 }
