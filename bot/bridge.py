@@ -22,6 +22,7 @@ import json
 import mimetypes
 import os
 import sys
+import time
 import urllib.request
 
 MIME = {
@@ -48,8 +49,17 @@ def call(payload):
         method="POST",
     )
     # Apps Script يرد بتحويل 302 لرابط النتيجة، وurllib يتبعه بـ GET تلقائياً
-    with urllib.request.urlopen(req, timeout=300) as res:
-        body = json.loads(res.read().decode("utf-8"))
+    # Apps Script يرجّع أحياناً صفحة HTML بدل JSON (ضغط مؤقت)، فنعيد المحاولة
+    body = None
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=300) as res:
+                body = json.loads(res.read().decode("utf-8"))
+            break
+        except (ValueError, OSError):
+            time.sleep(2 * (attempt + 1))
+    if body is None:
+        sys.exit("البوت ما رد بشكل صحيح بعد 4 محاولات (Apps Script مشغول). جرّب بعد دقيقة.")
     if not body.get("ok"):
         sys.exit("خطأ من البوت: " + str(body.get("error")))
     return body

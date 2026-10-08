@@ -943,11 +943,22 @@ function tendersSheet_() {
   return sh;
 }
 
+/** الجدول يحوّل "1/2026" و"2026-10-20" لتواريخ تلقائياً، فنرجعها نص. */
+function cellText_(v) {
+  if (Object.prototype.toString.call(v) !== '[object Date]') return v;
+  return Utilities.formatDate(v, 'Asia/Baghdad', 'yyyy-MM-dd');
+}
+
 function rowToTender_(r) {
   return {
-    key: r[0], added: r[1], entity: r[2], title: r[3], number: r[4], gov: r[5], category: r[6],
-    cost: r[7], closing: r[8], link: r[9], fit: r[10], notes: r[11], status: r[12], updated: r[13]
+    key: r[0], added: cellText_(r[1]), entity: r[2], title: r[3], number: r[4], gov: r[5], category: r[6],
+    cost: r[7], closing: cellText_(r[8]), link: r[9], fit: r[10], notes: r[11], status: r[12], updated: r[13]
   };
+}
+
+/** أعمدة التاريخ والرقم تنكتب كنص حتى الجدول ما يحوّلها. */
+function textColumns_(sh) {
+  [2, 5, 9, 14].forEach(function (c) { sh.getRange(2, c, 2000, 1).setNumberFormat('@'); });
 }
 
 function listTenders_() {
@@ -962,6 +973,7 @@ function listTenders_() {
 /** يضيف أو يحدّث المناقصات حسب المفتاح. حالة يغيّرها الموظفين بالبوت ما تنكتب فوقها. */
 function syncTenders_(tenders) {
   const sh = tendersSheet_();
+  textColumns_(sh);
   const values = sh.getDataRange().getValues();
   const index = {};
   for (let i = 1; i < values.length; i++) index[values[i][0]] = i + 1;
@@ -976,7 +988,7 @@ function syncTenders_(tenders) {
     const at = index[t.key];
     if (at) {
       const old = values[at - 1];
-      row[1] = old[1];                                   // تاريخ الإضافة الأصلي
+      row[1] = cellText_(old[1]);                                  // تاريخ الإضافة الأصلي
       if (old[12] && old[12] !== 'جديدة') row[12] = old[12]; // حالة اختارها موظف
       sh.getRange(at, 1, 1, row.length).setValues([row]);
       updated++;
