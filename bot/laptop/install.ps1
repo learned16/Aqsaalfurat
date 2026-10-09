@@ -7,7 +7,9 @@ New-Item -ItemType Directory -Force -Path $dir | Out-Null
 
 Write-Host ''
 Write-Host '=== تنصيب برنامج مكتب أقصى الفرات ===' -ForegroundColor Yellow
-$worker = Read-Host 'رابط الوسيط (مثل https://aqsa-bot.xxx.workers.dev)'
+$worker = Read-Host 'رابط الوسيط (Enter = https://aqsa-bot.companyaqsaalfurat.workers.dev)'
+if (-not $worker) { $worker = 'https://aqsa-bot.companyaqsaalfurat.workers.dev' }
+$worker = $worker -replace '/office/?$', ''
 $pin = Read-Host 'رمز المكتب (نفس OFFICE_PIN)'
 
 $drive = @('G:\My Drive', 'G:\محرك Drive الخاص بي', "$env:USERPROFILE\Google Drive") | Where-Object { Test-Path $_ } | Select-Object -First 1
