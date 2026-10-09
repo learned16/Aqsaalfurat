@@ -10,6 +10,7 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0}
+[hidden]{display:none!important}
 /* Layout: the office fills the stage; a control sheet sits on the right (RTL start). Light look that matches the real office: white, charcoal, walnut and gold. Single theme by choice. */
 :root{
   --bg:#eef0f2; --surface:#ffffff; --raised:#f4f5f6; --line:#dcdfe3;
@@ -36,6 +37,12 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 .spot.on::before{background:var(--ink)}
 @keyframes ping{0%{box-shadow:0 0 0 0 rgba(233,199,126,.8)}70%{box-shadow:0 0 0 9px rgba(233,199,126,0)}100%{box-shadow:0 0 0 0 rgba(233,199,126,0)}}
 .hint{position:absolute;inset-block-end:12px;inset-inline-end:12px;font-size:12px;color:#fff;background:rgba(29,33,36,.75);padding:6px 10px;border-radius:6px;pointer-events:none}
+.tools{position:absolute;inset-block-start:12px;inset-inline-start:12px;display:flex;gap:8px;flex-wrap:wrap}
+.tool{font:inherit;font-size:13px;font-weight:600;color:#fff;background:rgba(29,33,36,.82);border:1px solid rgba(233,199,126,.6);border-radius:999px;padding:7px 13px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.tool:hover{background:rgba(29,33,36,.95)}
+.tool.on{background:#e9c77e;color:var(--ink);border-color:#e9c77e}
+.tool:focus-visible{outline:2px solid #e9c77e;outline-offset:2px}
+.tool[hidden]{display:none}
 .panel{grid-area:panel;min-height:0;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px;border-inline-end:1px solid var(--line)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .eyebrow{font-size:12px;color:var(--gold);font-weight:600;letter-spacing:.04em}
@@ -91,7 +98,12 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0;font-weight:500}
   <main class="stage" id="stage">
     <canvas id="c" aria-label="المكتب ثلاثي الأبعاد"></canvas>
     <div id="spots"></div>
-    <div class="hint">اسحب حتى تتلفت بالمكتب · اضغط على أي شي مأشر</div>
+    <div class="tools">
+      <button class="tool" id="t-walk" type="button">🚶 تجول 360</button>
+      <button class="tool" id="t-next" type="button" hidden>➡️ المحطة الجاية</button>
+      <button class="tool" id="t-exit" type="button" hidden>⤴️ رجوع للنظرة العامة</button>
+    </div>
+    <div class="hint" id="hint">اسحب حتى تتلفت بالمكتب · اضغط على أي شي مأشر</div>
   </main>
 </div>
 
@@ -132,7 +144,11 @@ const camera = new THREE.PerspectiveCamera(52, 1, 0.05, 60);
 camera.position.set(0.6, 1.7, 3.2);
 const controls = new THREE.OrbitControls(camera, canvas);
 controls.target.set(0, 1.05, -2.0);
-Object.assign(controls, {enableDamping:true, enablePan:false, minDistance:1.2, maxDistance:5.6, minPolarAngle:0.9, maxPolarAngle:1.6, minAzimuthAngle:-0.75, maxAzimuthAngle:0.75});
+// حدود النظرة العامة: تدوير محدود للمكتب من برّه
+const LIMITS_OVERVIEW = {minDistance:1.2, maxDistance:5.6, minPolarAngle:0.9, maxPolarAngle:1.6, minAzimuthAngle:-0.75, maxAzimuthAngle:0.75};
+// حدود التجول: تقف بمحطة وتتلفت 360 درجة حوالَيك
+const LIMITS_WALK = {minDistance:0.45, maxDistance:0.45, minPolarAngle:0.5, maxPolarAngle:1.95, minAzimuthAngle:-Infinity, maxAzimuthAngle:Infinity};
+Object.assign(controls, {enableDamping:true, enablePan:false}, LIMITS_OVERVIEW);
 controls.update();
 
 // ---------- helpers ----------
@@ -400,8 +416,8 @@ const pickables = []; Object.values(HOT).forEach(h => h.obj.traverse(o => { if (
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
 function pick(e){ const r = canvas.getBoundingClientRect(); ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ptr,camera); const hit = ray.intersectObjects(pickables,false)[0]; return hit ? hit.object.userData.hot : null; }
 canvas.addEventListener("pointerdown", e => down = {x:e.clientX,y:e.clientY});
-canvas.addEventListener("pointerup", e => { if (!down) return; const mv = Math.hypot(e.clientX-down.x,e.clientY-down.y); down = null; if (mv < 6) { const k = pick(e); if (k) open(k); } });
-canvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse" && !down) canvas.style.cursor = pick(e) ? "pointer" : "grab"; });
+canvas.addEventListener("pointerup", e => { if (!down) return; const mv = Math.hypot(e.clientX-down.x,e.clientY-down.y); down = null; if (!walking && mv < 6) { const k = pick(e); if (k) open(k); } });
+canvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse" && !down) canvas.style.cursor = walking ? "grab" : (pick(e) ? "pointer" : "grab"); });
 
 let tween = null;
 const VIEWS = {
@@ -409,7 +425,46 @@ const VIEWS = {
   tv:[[1.6,1.65,-.4],[3.95,1.7,-.7]], logo:[[0,1.6,-.6],[0,1.55,-3.45]],
   projects:[[-1.6,1.7,-.2],[-3.95,1.7,-.6]], lights:[[0,1.3,2.4],[-.6,2.6,-.5]], home:[[.6,1.7,3.2],[0,1.05,-2]]
 };
-function glide(k){ const v = VIEWS[k]; if (!v) return; tween = {t0:performance.now(), dur:reduced?1:900, fp:camera.position.clone(), ft:controls.target.clone(), tp:new THREE.Vector3(...v[0]), tt:new THREE.Vector3(...v[1])}; }
+function glideTo(pos, tgt, dur){ tween = {t0:performance.now(), dur:reduced?1:(dur||900), fp:camera.position.clone(), ft:controls.target.clone(), tp:pos.clone(), tt:tgt.clone()}; }
+function glide(k){ const v = VIEWS[k]; if (!v) return; glideTo(new THREE.Vector3(...v[0]), new THREE.Vector3(...v[1])); }
+
+// ---------- walk / 360 tour ----------
+// محطات وقوف جوّا الغرفة، كل وحدة: مكان الوقوف + نحو وين تتلفت أول ما توصل. ارتفاع النظر 1.55م
+const EYE = 1.55;
+const STANDS = [
+  {name:"قدام مكتب المدير", pos:[0,EYE,-0.6],  look:[0,1.4,-3.2]},
+  {name:"جنب الطابعة",     pos:[1.7,EYE,-1.4], look:[1.6,0.9,-2.5]},
+  {name:"ركن الجلسة",       pos:[2.6,EYE,0.4],  look:[0,1.3,-2.5]},
+  {name:"وسط الغرفة",       pos:[0,EYE,0.8],    look:[0,1.45,-3.3]},
+  {name:"جنب الأرشيف",      pos:[-2.6,EYE,-0.2],look:[-3.7,1.7,-0.6]}
+];
+let walking = false, standIx = 0;
+const PIVOT = 0.45; // بُعد نقطة الدوران قدام محطة الوقوف، حتى تتلفت بمكانك
+function applyLimits(obj){ Object.assign(controls, obj); }
+function gotoStand(i){
+  standIx = (i + STANDS.length) % STANDS.length;
+  const s = STANDS[standIx];
+  const pos = new THREE.Vector3(...s.pos), look = new THREE.Vector3(...s.look);
+  // نقطة الدوران قريبة قدام الوقفة باتجاه النظر (مو عند الجدار)، حتى OrbitControls ما يشد الكاميرا
+  const pivot = pos.clone().add(look.clone().sub(pos).normalize().multiplyScalar(PIVOT));
+  glideTo(pos, pivot, 1100);
+  $("hint").textContent = "📍 " + s.name + " · اسحب حتى تتلفت 360° · «المحطة الجاية» حتى تنتقل";
+}
+function setWalk(on){
+  walking = on;
+  $("t-walk").classList.toggle("on", on);
+  $("t-next").hidden = !on; $("t-exit").hidden = !on;
+  Object.values(HOT).forEach(h => h.el.hidden = on); // نخفي النقاط وقت التجول
+  if (on){ applyLimits(LIMITS_WALK); gotoStand(0); }
+  else {
+    applyLimits(LIMITS_OVERVIEW);
+    glide("home");
+    $("hint").textContent = "اسحب حتى تتلفت بالمكتب · اضغط على أي شي مأشر";
+  }
+}
+$("t-walk").addEventListener("click", ()=> setWalk(!walking));
+$("t-next").addEventListener("click", ()=> gotoStand(standIx + 1));
+$("t-exit").addEventListener("click", ()=> setWalk(false));
 
 // ---------- bot link ----------
 const PIN_KEY = "aqsa-office-pin";
@@ -553,7 +608,7 @@ function tick(now){
   controls.update();
   renderer.render(scene,camera);
   const r = canvas.getBoundingClientRect();
-  Object.values(HOT).forEach(h=>{ v3.copy(h.at).project(camera); const vis = v3.z < 1 && Math.abs(v3.x) < 1.02 && Math.abs(v3.y) < 1.02;
+  if (!walking) Object.values(HOT).forEach(h=>{ v3.copy(h.at).project(camera); const vis = v3.z < 1 && Math.abs(v3.x) < 1.02 && Math.abs(v3.y) < 1.02;
     h.el.hidden = !vis; if (vis) h.el.style.transform = `translate(${(v3.x*.5+.5)*r.width}px,${(-v3.y*.5+.5)*r.height}px) translate(-50%,-50%)`; });
   requestAnimationFrame(tick);
 }
