@@ -364,6 +364,20 @@ function getPin(){ try { return localStorage.getItem(PIN_KEY) || ""; } catch(e) 
 function setPin(v){ try { if (v) localStorage.setItem(PIN_KEY, v); else localStorage.removeItem(PIN_KEY); } catch(e) {} renderMode(); }
 function renderMode(){ const on = !!getPin(); $("mode").textContent = on ? "مربوط بالبوت" : "غير مربوط"; }
 let afterPin = null;
+let real = {text:"اربط بالبوت حتى تشوف إذا اللابتوب الحقيقي متصل."};
+async function checkReal(){
+  const pin = getPin(); if (!pin) return;
+  try {
+    const r = await fetch("/office/status", {headers:{"X-Office-Pin":pin}});
+    if (!r.ok) return;
+    const d = await r.json();
+    const mins = d.seen ? Math.round((d.now - d.seen)/60000) : null;
+    real.text = !d.kv ? "طابور اللابتوب مو مربوط بعد (OFFICE_KV)." :
+      mins === null ? "برنامج اللابتوب ما اتصل بعد." :
+      mins <= 5 ? "اللابتوب الحقيقي متصل ✓" : `اللابتوب الحقيقي مو متصل (آخر مرة قبل ${mins} دقيقة).`;
+    if (current === "laptop") renderSheet();
+  } catch(e) {}
+}
 async function send(cmd, label){
   const pin = getPin();
   if (!pin) { afterPin = current; current = "pin"; renderSheet(); return false; }
@@ -392,10 +406,13 @@ const SHEETS = {
   laptop: () => `
     <span class="eyebrow">اللابتوب</span>
     <h2>لابتوب المكتب</h2>
+    <p>${real.text}</p>
     <div class="state ${busy?"busy":laptopOn?"":"off"}"><i></i>${busy?"دا ينفّذ…":laptopOn?"شغّال، ينتظر أمرك":"مطفي"}</div>
     <div class="actions">
       ${laptopOn ? `<button class="btn primary" data-act="print" ${busy?"disabled":""}>اطبع صفحة تجربة</button>
       <button class="btn" data-act="restart" ${busy?"disabled":""}>إعادة تشغيل</button>
+      <button class="btn" data-act="sleep" ${busy?"disabled":""}>نوّم</button>
+      <button class="btn" data-act="lock" ${busy?"disabled":""}>اقفل الشاشة</button>
       <button class="btn" data-act="off" ${busy?"disabled":""}>طفّي</button>` : `<button class="btn primary" data-act="on">شغّل اللابتوب</button>`}
     </div>
     <form class="ask" id="askf"><input id="ask" placeholder="اكتب أمر، مثلاً: اطبع كتاب الاعتذار" ${laptopOn&&!busy?"":"disabled"} aria-label="أمر للابتوب"><button class="btn" ${laptopOn&&!busy?"":"disabled"}>أرسل</button></form>`,
@@ -441,6 +458,7 @@ $("sheet").addEventListener("click", e => {
   const act = a.dataset.act;
   if (act === "unpin") { setPin(""); addLog("انفصل هذا الجهاز"); current = null; renderSheet(); return; }
   if (act === "print") { runPrint("اطبع صفحة تجربة"); send("print", "اطبع صفحة تجربة"); }
+  if (act === "sleep" || act === "lock") { const lbl = act === "sleep" ? "نوّم اللابتوب" : "اقفل الشاشة"; addLog(lbl); send(act, lbl); return; }
   if (act === "lamp") { lampOn = !lampOn; lampLight.visible = lampOn; bulb.material.color.set(lampOn?0xffe2a8:0x6b6155); addLog(lampOn?"شغّل المصباح":"طفّي المصباح"); renderSheet(); }
   if (act === "off") { busy = true; renderSheet(); setScreen("busy","دا يطفي…"); addLog("طفّي اللابتوب"); send("shutdown", "طفّي اللابتوب");
     setTimeout(()=>{ busy = false; laptopOn = false; setScreen("off"); ledM.color.set(0x333333); renderSheet(); }, reduced?10:1600); }
@@ -481,7 +499,7 @@ function tick(now){
   requestAnimationFrame(tick);
 }
 fontsReady.then(()=>{ redraw(screenTex); redraw(plaqueTex); });
-renderMode(); renderSheet(); renderLog();
+renderMode(); renderSheet(); renderLog(); checkReal(); setInterval(checkReal, 30000);
 requestAnimationFrame(tick);
 })();
 </script>

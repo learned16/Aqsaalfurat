@@ -15,7 +15,7 @@
 - المستخدم يلصق الكود يدوياً بـ Apps Script وبعدها Deploy ← Manage deployments ← New version. أي تعديل بالكود ما يشتغل لحد ما يسوي هذا. اسأله إذا حدّث.
 - القائمة: اطلب شي (طلب حر + ملفات)، بحث بالأرشيف، مناقصات اليوم، اعتذار، وصل، طلباتي. صاحب البوت (OWNER_ID) عنده 📥 كل الطلبات و👑 الإدارة (/add /remove /manager /watch /unwatch /say /admin). المراقبين (WATCH_IDS) يوصلهم نسخة من كل طلب.
 - الطلبات تنكتب بجدول «طابور بوت أقصى الفرات» (مجلد 09_طلبات_البوت بالأرشيف).
-- المكتب الافتراضي: `bot/cloudflare/office.html` على الوسيط بمسار `/office`، أوامره تروح رسالة تلغرام لصاحب البوت عبر `/office/cmd` (متغيرات الوسيط TG_TOKEN, OWNER_ID, OFFICE_PIN). المستخدم يلصق `bot/single/worker.js` (يتولّد بـ `python3 bot/cloudflare/build.py`). برنامج اللابتوب اللي ينفّذ الأوامر مو مسوّى بعد.
+- المكتب الافتراضي: `bot/cloudflare/office.html` على الوسيط بمسار `/office`، أوامره تروح رسالة تلغرام لصاحب البوت عبر `/office/cmd` (متغيرات الوسيط TG_TOKEN, OWNER_ID, OFFICE_PIN). المستخدم يلصق `bot/single/worker.js` (يتولّد بـ `python3 bot/cloudflare/build.py`). برنامج اللابتوب (ويندوز) بـ `bot/laptop` (install.cmd): يسأل `/office/poll` كل 5 ثواني (طابور KV باسم OFFICE_KV)، ويطبع مجلد «للطباعة». ما منصّب بعد.
 - Script Properties: TELEGRAM_TOKEN, TG_SECRET, API_KEY, ALLOWED_IDS, OWNER_ID, MANAGER_ID, WATCH_IDS, PRINTER_EMAIL, WORKER_URL, LAST_BRIEF.
 - الأرشيف (مجلد البحث): `18ypIMmqpsXTlMFNFN0LtX64V0ipAUXSY`.
 
