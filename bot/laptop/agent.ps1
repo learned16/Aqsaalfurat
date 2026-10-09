@@ -18,8 +18,9 @@ function Log($m) {
   Add-Content -Path $logFile -Value ('{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $m) -Encoding UTF8
 }
 
-function Report($text) {
-  $body = [Text.Encoding]::UTF8.GetBytes((@{ text = $text } | ConvertTo-Json -Compress))
+# $chat = معرّف تلغرام اللي دز الأمر من البوت، حتى ترجعله النتيجة
+function Report($text, $chat = '') {
+  $body = [Text.Encoding]::UTF8.GetBytes((@{ text = $text; chat = "$chat" } | ConvertTo-Json -Compress))
   try {
     Invoke-RestMethod -Uri "$base/office/done" -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $body -TimeoutSec 20 | Out-Null
   } catch { Log "report failed: $_" }
@@ -54,19 +55,39 @@ function Show-Message($text) {
   Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoProfile', '-Command', $cmd
 }
 
+# ملف دزّه البوت: ينزل من الوسيط وينطبع، وبعدين ينحفظ بمجلد «انطبع» أو «ما انطبع»
+function Print-BotFile($c) {
+  $name = ($c.name -replace '[\\/:*?"<>|]', '-').Trim()
+  if (-not $name) { $name = 'ملف' }
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmm-'
+  $tmp = Join-Path $env:TEMP ('aqsa-' + $c.file + [IO.Path]::GetExtension($name))
+  Invoke-WebRequest -Uri "$base/office/file?id=$($c.file)" -Headers $headers -OutFile $tmp -TimeoutSec 120 -UseBasicParsing
+  try {
+    Print-File $tmp
+    Move-Item -LiteralPath $tmp -Destination (Join-Path $doneDir ($stamp + $name)) -Force
+    Report "🖨️ انطبع: $name" $c.chat
+  } catch {
+    Log "print failed $name : $_"
+    Move-Item -LiteralPath $tmp -Destination (Join-Path $failDir ($stamp + $name)) -Force -ErrorAction SilentlyContinue
+    Report "⚠️ ما انطبع: $name (انحط بمجلد «ما انطبع» باللابتوب)" $c.chat
+  }
+}
+
 function Run-Command($c) {
-  Log "cmd $($c.cmd) $($c.text)"
+  Log "cmd $($c.cmd) $($c.text) $($c.name)"
+  $to = $c.chat
   switch ($c.cmd) {
-    'print'    { Print-TestPage; Report '🖨️ انطبعت صفحة التجربة' }
-    'shutdown' { Report '⏻ اللابتوب ينطفي بعد دقيقة'; shutdown.exe /s /t 60 /c 'أمر من مكتب أقصى الفرات' }
-    'restart'  { Report '🔄 اللابتوب يعيد التشغيل بعد دقيقة'; shutdown.exe /r /t 60 /c 'أمر من مكتب أقصى الفرات' }
-    'lock'     { rundll32.exe user32.dll,LockWorkStation; Report '🔒 انقفلت الشاشة' }
+    'printfile' { Print-BotFile $c }
+    'print'    { Print-TestPage; Report '🖨️ انطبعت صفحة التجربة' $to }
+    'shutdown' { Report '⏻ اللابتوب ينطفي بعد دقيقة' $to; shutdown.exe /s /t 60 /c 'أمر من مكتب أقصى الفرات' }
+    'restart'  { Report '🔄 اللابتوب يعيد التشغيل بعد دقيقة' $to; shutdown.exe /r /t 60 /c 'أمر من مكتب أقصى الفرات' }
+    'lock'     { rundll32.exe user32.dll,LockWorkStation; Report '🔒 انقفلت الشاشة' $to }
     'sleep'    {
-      Report '🌙 اللابتوب نام. يگعد وحده بالوقت المضبوط أو تضغط زر التشغيل'
+      Report '🌙 اللابتوب نام. يگعد وحده بالوقت المضبوط أو تضغط زر التشغيل' $to
       Add-Type -AssemblyName System.Windows.Forms
       [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false) | Out-Null
     }
-    'text'     { Show-Message $c.text; Report ('📩 ظهرت الرسالة على الشاشة: ' + $c.text) }
+    'text'     { Show-Message $c.text; Report ('📩 ظهرت الرسالة على الشاشة: ' + $c.text) $to }
     default    { Log "unknown $($c.cmd)" }
   }
 }
@@ -103,7 +124,7 @@ while ($true) {
     $r = Invoke-RestMethod -Uri $uri -Headers $headers -TimeoutSec 20
     if ($beat) { $lastBeat = Get-Date }
     foreach ($c in $r.cmds) {
-      try { Run-Command $c } catch { Log "cmd failed $($c.cmd): $_"; Report "⚠️ ما تنفّذ: $($c.cmd)" }
+      try { Run-Command $c } catch { Log "cmd failed $($c.cmd): $_"; Report "⚠️ ما تنفّذ: $($c.cmd) $($c.name)" $c.chat }
     }
   } catch { Log "poll: $_" }
   Watch-PrintFolder

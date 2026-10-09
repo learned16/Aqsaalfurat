@@ -119,6 +119,7 @@ function showMenu_(chatId, text) {
     [btn_('📝 اعتذار', 'menu:apology'), btn_('🧾 تسجيل وصل', 'menu:receipt')],
     [btn_('📋 طلباتي', 'menu:mine')]
   ];
+  if (isManager_(chatId)) kb.unshift([btn_('🖥️ المكتب (طباعة واللابتوب)', 'menu:office')]);
   if (isOwner_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all'), btn_('👑 الإدارة', 'menu:admin')]);
   else if (canSeeAll_(chatId)) kb.push([btn_('📥 كل الطلبات', 'menu:all')]);
   send_(chatId, text, kb);
@@ -274,6 +275,7 @@ function handleCallback_(user, data, message) {
     if (value === 'tenders') return showTenders_(user);
     if (value === 'all') return showAll_(user);
     if (value === 'admin') return showAdmin_(user);
+    if (value === 'office') return showOffice_(user);
     if (value === 'browse') {
       clearState_(user.chatId);
       return browseFolder_(user, ARCHIVE_FOLDER_ID);
@@ -283,6 +285,8 @@ function handleCallback_(user, data, message) {
   if (kind === 'mgr') return handleManager_(user, parts[1], parts.slice(2).join(':'), message);
   if (kind === 'td') return handleTenderButton_(user, parts[1], parts.slice(2).join(':'), message);
   if (kind === 'sf') return sendFoundFile_(user, value);
+  if (kind === 'off') return handleOfficeButton_(user, value);
+  if (kind === 'pf') return printArchiveFile_(user, value);
   if (kind === 'fd') return browseFolder_(user, value);
   if (kind === 'rq' && parts[1] === 'files') return sendRequestFiles_(user, parts.slice(2).join(':'));
 
@@ -355,6 +359,7 @@ function handleInput_(user, state, msg) {
   const step = stepName_(state);
   const text = (msg.text || '').trim();
   if (state.flow === 'reject') return finishReject_(user, state, text);
+  if (state.flow === 'print' || state.flow === 'screen') return handleOfficeInput_(user, state, msg);
 
   const fileRef = msg.document ? { id: msg.document.file_id, name: msg.document.file_name } :
     msg.photo ? { id: msg.photo[msg.photo.length - 1].file_id, name: 'صورة_' + Date.now() + '.jpg' } : null;
@@ -499,10 +504,11 @@ function handleManager_(user, action, id, message) {
 
   if (action === 'ok') {
     edit_(user.chatId, message.message_id, '✅ وافقت على ' + id + '، جاري الإرسال للطابعة…');
-    const printed = printRequest_(req);
+    // الطباعة باللابتوب أول، وإيميل الطابعة إذا الوسيط مو مضبوط
+    const printed = workerBase_() ? printRequestOnLaptop_(user, req) : printRequest_(req);
     if (printed.ok) {
       updateStatus_(id, STATUS.PRINTED, printed.count + ' ملف انرسل للطابعة');
-      send_(user.chatId, '🖨️ انرسل ' + printed.count + ' ملف للطابعة.');
+      send_(user.chatId, '🖨️ انرسل ' + printed.count + ' ملف للطابعة بالمكتب.');
       send_(req.chat_id, '🖨️ المدير وافق على ' + id + ' وانرسل للطباعة.');
     } else {
       updateStatus_(id, STATUS.APPROVED, printed.error);

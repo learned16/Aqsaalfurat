@@ -216,6 +216,7 @@ function sendFoundFile_(user, fileId) {
   if (file.getSize() > 45 * 1024 * 1024) {
     return send_(user.chatId, '📄 ' + escapeHtml_(file.getName()) + ' أكبر من حد تلغرام، افتحه من هنا:\n' + file.getUrl());
   }
-  const res = sendDriveFile_(user.chatId, fileId, file.getName());
+  const kb = isManager_(user.id) ? [[btn_('🖨️ اطبعه بالمكتب', 'pf:' + fileId)]] : null;
+  const res = sendDriveFile_(user.chatId, fileId, file.getName(), kb);
   if (!res.ok) send_(user.chatId, '📄 ما كدرت أدزه كملف، افتحه من هنا:\n' + file.getUrl());
 }

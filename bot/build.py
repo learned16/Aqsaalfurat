@@ -2,7 +2,7 @@
 """يولّد single/Code.gs من ملفات apps-script/ بالترتيب الصحيح."""
 import os
 
-ORDER = "Config Telegram Storage Bot Search Tenders Admin Api Setup Poll Worker".split()
+ORDER = "Config Telegram Storage Bot Search Tenders Admin Office Api Setup Poll Worker".split()
 HERE = os.path.dirname(os.path.abspath(__file__))
 HEAD = ("// بوت أقصى الفرات — كل الكود بملف واحد. انسخه كامل لملف Code.gs بـ Apps Script.\n"
         "// مولّد من مجلد apps-script/ (لا تعدّل هنا، عدّل الملفات الأصلية وأعد التوليد).\n\n")
