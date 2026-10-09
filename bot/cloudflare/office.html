@@ -10,34 +10,35 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0}
-/* Layout: the office fills the screen; a control sheet sits on the right (RTL start). Warm evening look, single theme by choice. */
+/* Layout: the office fills the stage; a control sheet sits on the right (RTL start). Light look that matches the real office: white, charcoal, walnut and gold. Single theme by choice. */
 :root{
-  --bg:#17130f; --surface:#211b16; --raised:#2c241d; --line:#3a3027;
-  --fg:#f1e9df; --muted:#ad9f8f;
-  --accent:#e8a33d; --accent-ink:#1d1305;
-  --ok:#62c48d; --info:#7fb2e5; --off:#d9675b;
+  --bg:#eef0f2; --surface:#ffffff; --raised:#f4f5f6; --line:#dcdfe3;
+  --fg:#1d2124; --muted:#5f6870;
+  --gold:#a8792a; --gold-soft:#f3e7cf; --walnut:#5a3524; --ink:#1d2124;
+  --ok:#23845a; --info:#2c6fae; --off:#b8443a;
   --display:"Readex Pro","IBM Plex Sans Arabic",Tahoma,sans-serif;
   --body:"IBM Plex Sans Arabic",Tahoma,"Segoe UI",sans-serif;
-  color-scheme:dark;
+  color-scheme:light;
 }
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.6}
 .app{display:grid;grid-template-columns:minmax(290px,350px) 1fr;grid-template-rows:auto 1fr;grid-template-areas:"bar bar" "panel stage";height:100%}
-.bar{grid-area:bar;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
-.bar h1{margin:0;font-family:var(--display);font-size:20px;font-weight:700}
-.mode{font-size:12px;font-weight:600;color:var(--accent-ink);background:var(--accent);border-radius:4px;padding:1px 8px}
-.clock{margin-inline-start:auto;color:var(--muted);font-variant-numeric:tabular-nums}
-.stage{grid-area:stage;position:relative;min-width:0;min-height:0;overflow:hidden}
+.bar{grid-area:bar;display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:12px 20px;background:var(--ink);color:#fff}
+.bar h1{margin:0;font-family:var(--display);font-size:20px;font-weight:700;color:#e9c77e}
+.bar small{color:#c9cdd1}
+.mode{font-size:12px;font-weight:600;color:var(--ink);background:#e9c77e;border-radius:4px;padding:1px 8px}
+.clock{margin-inline-start:auto;color:#c9cdd1;font-variant-numeric:tabular-nums}
+.stage{grid-area:stage;position:relative;min-width:0;min-height:0;overflow:hidden;background:#dfe2e5}
 #c{display:block;width:100%;height:100%;touch-action:none}
-.spot{position:absolute;inset-inline-start:0;top:0;display:flex;align-items:center;gap:6px;transform:translate(-50%,-50%);font:inherit;font-size:12px;font-weight:600;color:var(--fg);background:rgba(23,19,15,.78);border:1px solid rgba(232,163,61,.55);border-radius:999px;padding:3px 10px 3px 8px;cursor:pointer;white-space:nowrap;left:0;right:auto}
-.spot::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(232,163,61,.7);animation:ping 1.8s infinite}
-.spot.on{background:var(--accent);color:var(--accent-ink)}
-.spot.on::before{background:var(--accent-ink)}
-@keyframes ping{0%{box-shadow:0 0 0 0 rgba(232,163,61,.7)}70%{box-shadow:0 0 0 9px rgba(232,163,61,0)}100%{box-shadow:0 0 0 0 rgba(232,163,61,0)}}
-.hint{position:absolute;inset-block-end:12px;inset-inline-end:12px;font-size:12px;color:var(--muted);background:rgba(23,19,15,.8);padding:6px 10px;border-radius:6px;pointer-events:none}
+.spot{position:absolute;left:0;top:0;display:flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;color:#fff;background:rgba(29,33,36,.82);border:1px solid rgba(233,199,126,.7);border-radius:999px;padding:3px 10px 3px 8px;cursor:pointer;white-space:nowrap}
+.spot::before{content:"";width:8px;height:8px;border-radius:50%;background:#e9c77e;animation:ping 1.8s infinite}
+.spot.on{background:#e9c77e;color:var(--ink)}
+.spot.on::before{background:var(--ink)}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(233,199,126,.8)}70%{box-shadow:0 0 0 9px rgba(233,199,126,0)}100%{box-shadow:0 0 0 0 rgba(233,199,126,0)}}
+.hint{position:absolute;inset-block-end:12px;inset-inline-end:12px;font-size:12px;color:#fff;background:rgba(29,33,36,.75);padding:6px 10px;border-radius:6px;pointer-events:none}
 .panel{grid-area:panel;min-height:0;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px;border-inline-end:1px solid var(--line)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
-.eyebrow{font-size:12px;color:var(--accent);font-weight:600;letter-spacing:.04em}
+.eyebrow{font-size:12px;color:var(--gold);font-weight:600;letter-spacing:.04em}
 .card h2{margin:0;font-family:var(--display);font-size:21px;font-weight:700;text-wrap:balance}
 .card p{margin:0;color:var(--muted)}
 .state{display:flex;align-items:center;gap:8px;font-weight:600}
@@ -45,24 +46,28 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 .state.off i{background:var(--off)} .state.busy i{background:var(--info)}
 .actions{display:flex;flex-wrap:wrap;gap:8px}
 .btn{font:inherit;font-weight:600;border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:var(--raised);color:var(--fg);text-decoration:none;display:inline-block}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn:hover{filter:brightness(1.1)}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#e9c77e}
+.btn:hover{filter:brightness(.96)}
+.btn.primary:hover{filter:brightness(1.25)}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
-.btn:focus-visible,.spot:focus-visible,input:focus-visible,.pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn:focus-visible,.spot:focus-visible,input:focus-visible,.pick:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .ask{display:flex;gap:8px}
-.ask input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+.ask input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--fg);background:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 10px}
 .picks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .pick{width:100%;text-align:start;font:inherit;color:var(--fg);background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer}
+.pick:hover{border-color:var(--gold)}
 .pick b{display:block;font-family:var(--display);font-weight:500}
 .pick span{font-size:12px;color:var(--muted)}
 .log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .log li{display:grid;grid-template-columns:1fr auto;gap:10px}
 .log time{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
 .sec{margin:0;font-size:12px;color:var(--muted);font-weight:600}
-.note{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.note{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin:0}
+dl.facts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+dl.facts dt{color:var(--muted)} dl.facts dd{margin:0;font-weight:500}
 @media (max-width:760px){
-  .app{grid-template-columns:1fr;grid-template-rows:auto 58vh auto;grid-template-areas:"bar" "stage" "panel";height:auto}
-  .app{grid-template-rows:auto 58svh auto}
+  .app{grid-template-columns:1fr;grid-template-rows:auto 60vh auto;grid-template-areas:"bar" "stage" "panel";height:auto}
+  .app{grid-template-rows:auto 60svh auto}
   .panel{overflow:visible;border:0}
   .bar{padding:12px 16px}
 }
@@ -70,11 +75,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 </style>
 </head>
 <body>
-
 <div class="app">
   <header class="bar">
-    <h1>مكتب أقصى الفرات</h1><span class="mode" id="mode">غير مربوط</span>
-    <span class="clock" id="hdr-clock">كركوك</span>
+    <h1>مكتب أقصى الفرات</h1><small>كركوك</small><span class="mode" id="mode">تجربة</span>
+    <span class="clock" id="hdr-clock"></span>
   </header>
   <aside class="panel">
     <section class="card" id="sheet" aria-live="polite"></section>
@@ -82,7 +86,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
       <h3 class="sec">سجل الأوامر</h3>
       <ul class="log" id="log"></ul>
     </section>
-    <p class="note">كل أمر من اللابتوب أو الطابعة يوصل رسالة لبوت تلغرام. اللابتوب الحقيقي ينفّذها بعد ما ننصّب برنامج المكتب عليه.</p>
+    <p class="note" id="note"></p>
   </aside>
   <main class="stage" id="stage">
     <canvas id="c" aria-label="المكتب ثلاثي الأبعاد"></canvas>
@@ -98,10 +102,12 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px
 "use strict";
 const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// on the Cloudflare relay the page lives at /office and can reach the bot; anywhere else it is a demo
+const LIVE = location.pathname.indexOf("/office") === 0;
 const ARCHIVE = "https://drive.google.com/drive/folders/18ypIMmqpsXTlMFNFN0LtX64V0ipAUXSY";
+const NAME = "أقصى الفرات", SUB = "للمقاولات والتجارة العامة";
 const $ = id => document.getElementById(id);
 
-// ---------- time in Kirkuk ----------
 function kirkukNow(){
   const parts = new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Baghdad",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(new Date());
   const g = t => +parts.find(p => p.type === t).value;
@@ -109,6 +115,7 @@ function kirkukNow(){
 }
 const pad2 = n => String(n).padStart(2,"0");
 const hm = t => pad2(t.h)+":"+pad2(t.m);
+const today = () => new Intl.DateTimeFormat("ar-IQ-u-nu-latn",{timeZone:"Asia/Baghdad",weekday:"long",day:"numeric",month:"long"}).format(new Date());
 
 // ---------- renderer ----------
 const canvas = $("c"), stage = $("stage");
@@ -118,223 +125,274 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 0.8;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x17130f);
-const camera = new THREE.PerspectiveCamera(48, 1, 0.05, 50);
-camera.position.set(2.3, 1.75, 1.4);
+scene.background = new THREE.Color(0xdfe2e5);
+const camera = new THREE.PerspectiveCamera(52, 1, 0.05, 60);
+camera.position.set(0.6, 1.7, 3.2);
 const controls = new THREE.OrbitControls(camera, canvas);
-controls.target.set(-0.2, 0.95, -1.9);
-Object.assign(controls, {enableDamping:true, enablePan:false, minDistance:1.2, maxDistance:4.8, minPolarAngle:0.85, maxPolarAngle:1.55, minAzimuthAngle:-0.25, maxAzimuthAngle:1.25});
+controls.target.set(0, 1.05, -2.0);
+Object.assign(controls, {enableDamping:true, enablePan:false, minDistance:1.2, maxDistance:5.6, minPolarAngle:0.9, maxPolarAngle:1.6, minAzimuthAngle:-0.75, maxAzimuthAngle:0.75});
 controls.update();
 
 // ---------- helpers ----------
-function mat(color, o){ return new THREE.MeshStandardMaterial(Object.assign({color, roughness:.85, metalness:0}, o||{})); }
+function mat(color, o){ return new THREE.MeshStandardMaterial(Object.assign({color, roughness:.8, metalness:0}, o||{})); }
 function box(w,h,d,m,x,y,z,parent){ const b = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m); b.position.set(x,y,z); b.castShadow = b.receiveShadow = true; (parent||scene).add(b); return b; }
+function cyl(rt,rb,h,m,x,y,z,parent,seg){ const c = new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg||24), m); c.position.set(x,y,z); c.castShadow = c.receiveShadow = true; (parent||scene).add(c); return c; }
 function canvasTex(w,h,draw){ const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; t.userData = {cv, ctx:cv.getContext("2d"), draw}; if (draw) { draw(t.userData.ctx, w, h); t.needsUpdate = true; } return t; }
 function redraw(t){ t.userData.draw(t.userData.ctx, t.userData.cv.width, t.userData.cv.height); t.needsUpdate = true; }
+const rnd = (i => () => { i = (i*16807) % 2147483647; return i/2147483647; })(42);
+
+// the company logo: sun, birds, palm island, river, citadel on its mound
+function drawLogo(c, cx, cy, s){
+  c.save(); c.translate(cx, cy); c.scale(s, s);
+  const sun = c.createLinearGradient(0,-120,0,10); sun.addColorStop(0,"#e8452c"); sun.addColorStop(.6,"#f39a2b"); sun.addColorStop(1,"#ffd34d");
+  c.fillStyle = sun; c.beginPath(); c.arc(0,10,120,Math.PI,0); c.fill();
+  c.strokeStyle = "#3a2a20"; c.lineWidth = 3;
+  for (const [bx,by] of [[30,-70],[50,-60],[68,-66],[86,-56]]) { c.beginPath(); c.moveTo(bx-7,by); c.quadraticCurveTo(bx-3,by-5,bx,by); c.quadraticCurveTo(bx+3,by-5,bx+7,by); c.stroke(); }
+  c.fillStyle = "#e9a23b"; c.beginPath(); c.moveTo(-170,30); c.lineTo(-90,-20); c.lineTo(-30,25); c.fill();
+  c.fillStyle = "#b83a2c"; c.beginPath(); c.moveTo(20,30); c.quadraticCurveTo(110,-10,210,35); c.lineTo(20,35); c.fill();
+  c.fillStyle = "#c9762f"; c.fillRect(70,-40,90,45);
+  for (let i=0;i<6;i++) c.fillRect(70+i*16,-50,9,12);
+  c.fillRect(95,-62,26,26); c.fillStyle = "#8a4a22"; c.fillRect(104,-30,9,14); c.fillRect(132,-28,7,10);
+  c.fillStyle = "#3f8c3a"; c.beginPath(); c.ellipse(-120,32,70,12,0,0,Math.PI*2); c.fill();
+  c.strokeStyle = "#2c2420"; c.lineWidth = 7; c.beginPath(); c.moveTo(-125,30); c.quadraticCurveTo(-118,-20,-112,-62); c.stroke();
+  c.fillStyle = "#1f2a24";
+  for (let k=0;k<6;k++){ const a = -Math.PI*0.95 + k*Math.PI/5.5; c.beginPath(); c.moveTo(-112,-62); c.quadraticCurveTo(-112+Math.cos(a)*30,-62+Math.sin(a)*30-10,-112+Math.cos(a)*55,-62+Math.sin(a)*45+12); c.quadraticCurveTo(-112+Math.cos(a)*30,-62+Math.sin(a)*20,-112,-62); c.fill(); }
+  const river = c.createLinearGradient(-200,0,200,60); river.addColorStop(0,"#1f5fae"); river.addColorStop(.5,"#46b3e6"); river.addColorStop(1,"#1d3f8f");
+  c.fillStyle = river; c.beginPath(); c.moveTo(-210,48); c.bezierCurveTo(-80,10,40,70,220,40); c.lineTo(220,58); c.bezierCurveTo(40,90,-90,30,-210,60); c.fill();
+  c.fillStyle = "#cfe9f7"; c.beginPath(); c.moveTo(-150,46); c.bezierCurveTo(-60,26,20,60,120,48); c.bezierCurveTo(20,66,-60,36,-150,50); c.fill();
+  c.strokeStyle = "#c9953e"; c.lineWidth = 4; c.beginPath(); c.moveTo(-205,64); c.lineTo(215,62); c.stroke();
+  c.restore();
+}
+function goldText(c, text, x, y, size, weight){
+  c.font = `${weight||700} ${size}px "Readex Pro", Tahoma, sans-serif`;
+  c.direction = "rtl"; c.textAlign = "center";
+  c.fillStyle = "rgba(90,60,20,.45)"; c.fillText(text, x+2, y+3);
+  const g = c.createLinearGradient(0,y-size,0,y); g.addColorStop(0,"#f6dc8f"); g.addColorStop(.5,"#c9953e"); g.addColorStop(1,"#e7c06a");
+  c.fillStyle = g; c.fillText(text, x, y);
+}
 
 // ---------- room ----------
-const floorTex = canvasTex(1024,1024,(c,w,h)=>{
-  const plank = 128;
-  for (let y=0; y<h; y+=plank) {
-    let x = -((y/plank)%3)*170;
-    while (x < w) { const len = 300 + ((x*7+y*3)%240);
-      const l = 34 + ((x+y)%9); c.fillStyle = `hsl(28,38%,${l}%)`; c.fillRect(x,y,len,plank);
-      c.strokeStyle = "rgba(0,0,0,.35)"; c.lineWidth = 3; c.strokeRect(x,y,len,plank);
-      c.strokeStyle = "rgba(255,230,200,.06)"; c.lineWidth = 1;
-      for (let k=0;k<5;k++){ c.beginPath(); c.moveTo(x, y+12+k*24); c.bezierCurveTo(x+len*.3,y+18+k*24,x+len*.6,y+6+k*24,x+len,y+14+k*24); c.stroke(); }
-      x += len; }
-  }
-});
-floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(2,2);
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(7,6), new THREE.MeshStandardMaterial({map:floorTex, roughness:.7}));
+const carpetTex = canvasTex(512,512,(c,w,h)=>{ c.fillStyle="#b9b3a8"; c.fillRect(0,0,w,h); for (let i=0;i<26000;i++){ const v = 140+Math.floor(rnd()*70); c.fillStyle=`rgba(${v},${v-4},${v-12},.55)`; c.fillRect(rnd()*w, rnd()*h, 1.4, 1.4); } });
+carpetTex.wrapS = carpetTex.wrapT = THREE.RepeatWrapping; carpetTex.repeat.set(5,5);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(8,7.2), new THREE.MeshStandardMaterial({map:carpetTex, roughness:1}));
 floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
-const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.4,1.7), mat(0x6d2e26,{roughness:1}));
-rug.rotation.x = -Math.PI/2; rug.position.set(0,0.004,-1.7); rug.receiveShadow = true; scene.add(rug);
-const rugBorder = new THREE.Mesh(new THREE.PlaneGeometry(2.1,1.4), mat(0x8c4a33,{roughness:1}));
-rugBorder.rotation.x = -Math.PI/2; rugBorder.position.set(0,0.005,-1.7); rugBorder.receiveShadow = true; scene.add(rugBorder);
+const wallM = mat(0xf4f5f6,{roughness:.92});
+const back = new THREE.Mesh(new THREE.PlaneGeometry(8,3), wallM); back.position.set(0,1.5,-3.5); back.receiveShadow = true; scene.add(back);
+const left = new THREE.Mesh(new THREE.PlaneGeometry(7.2,3), wallM); left.rotation.y = Math.PI/2; left.position.set(-4,1.5,0.1); left.receiveShadow = true; scene.add(left);
+const right = new THREE.Mesh(new THREE.PlaneGeometry(7.2,3), wallM); right.rotation.y = -Math.PI/2; right.position.set(4,1.5,0.1); right.receiveShadow = true; scene.add(right);
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(8,7.2), mat(0xf7f8f9,{roughness:1})); ceil.rotation.x = Math.PI/2; ceil.position.set(0,3,0.1); scene.add(ceil);
+box(8,.08,.02,mat(0xe7e8ea),0,.04,-3.49); box(.02,.08,7.2,mat(0xe7e8ea),-3.99,.04,.1); box(.02,.08,7.2,mat(0xe7e8ea),3.99,.04,.1);
 
-const wallM = mat(0xd8cfc1,{roughness:.95});
-const backWall = new THREE.Mesh(new THREE.PlaneGeometry(7,3), wallM); backWall.position.set(0,1.5,-3); backWall.receiveShadow = true; scene.add(backWall);
-const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6,3), mat(0xcfc5b6,{roughness:.95})); leftWall.rotation.y = Math.PI/2; leftWall.position.set(-3.5,1.5,0); leftWall.receiveShadow = true; scene.add(leftWall);
-box(7,.1,.03,mat(0x5a4636),0,.05,-2.985); box(.03,.1,6,mat(0x5a4636),-3.485,.05,0);
+// ceiling: linear LED strips and downlights, like the real office
+const ledOn = new THREE.MeshBasicMaterial({color:0xffffff, toneMapped:false});
+const spotOn = new THREE.MeshBasicMaterial({color:0xcfe4ff, toneMapped:false});
+const ledOff = new THREE.MeshBasicMaterial({color:0xb9bcc0});
+const leds = [], downs = [];
+[[-1.6,-1.2,.55],[-1.1,.4,.55],[1.6,-.6,-.6],[2.0,1.4,-.6]].forEach(([x,z,ry])=>{ const l = new THREE.Mesh(new THREE.BoxGeometry(2.4,.015,.045), ledOn); l.position.set(x,2.99,z); l.rotation.y = ry; scene.add(l); leds.push(l); });
+[[-2.6,-2.6],[-2.1,-2.6],[-1.6,-2.6],[1.6,-2.6],[2.1,-2.6],[2.6,-2.6],[-.5,1.2],[0,1.2],[.5,1.2]].forEach(([x,z])=>{ const d = new THREE.Mesh(new THREE.CircleGeometry(.05,20), spotOn); d.rotation.x = Math.PI/2; d.position.set(x,2.985,z); scene.add(d); downs.push(d); });
 
-// window with sky
-const skyTex = canvasTex(256,256,null);
-function drawSky(){
-  const t = kirkukNow(), hr = t.h + t.m/60;
-  skyTex.userData.draw = (c,w,h)=>{
-    let top, bot, stars = false, sun = null;
-    if (hr >= 6.5 && hr < 17) { top="#5c9bd6"; bot="#cfe3f1"; sun=[w*.7,h*.3,"#fff6d8"]; }
-    else if (hr >= 5 && hr < 6.5 || hr >= 17 && hr < 18.5) { top="#3b4f80"; bot="#f0a35e"; sun=[w*.35,h*.82,"#ffb062"]; }
-    else { top="#070b1a"; bot="#1c2440"; stars = true; }
-    const g = c.createLinearGradient(0,0,0,h); g.addColorStop(0,top); g.addColorStop(1,bot); c.fillStyle = g; c.fillRect(0,0,w,h);
-    if (stars) { c.fillStyle="#fff"; for (let i=0;i<60;i++){ const x=(i*97)%w, y=(i*53)%(h*.7); c.globalAlpha=.3+(i%5)/8; c.fillRect(x,y,1.5,1.5);} c.globalAlpha=1; c.fillStyle="#f4f1e6"; c.beginPath(); c.arc(w*.72,h*.25,14,0,Math.PI*2); c.fill(); }
-    if (sun) { c.fillStyle = sun[2]; c.beginPath(); c.arc(sun[0],sun[1],18,0,Math.PI*2); c.fill(); }
-    // Kirkuk skyline silhouette with the citadel mound
-    c.fillStyle = stars ? "#05070f" : "rgba(70,60,55,.85)";
-    c.beginPath(); c.moveTo(0,h); c.lineTo(0,h*.86);
-    const sk=[[0,.86],[.08,.8],[.14,.82],[.2,.74],[.26,.76],[.3,.7],[.38,.66],[.5,.64],[.58,.66],[.62,.6],[.64,.6],[.66,.66],[.74,.72],[.82,.7],[.9,.78],[1,.76]];
-    sk.forEach(p=>c.lineTo(p[0]*w,p[1]*h)); c.lineTo(w,h); c.fill();
-    if (stars) { c.fillStyle="#f7c96b"; for (let i=0;i<14;i++) c.fillRect(((i*41)%w), h*.8+((i*13)%18), 3, 3); }
-  };
-  redraw(skyTex);
-  return hr;
+// ---------- feature wall ----------
+const marbleTex = canvasTex(640,1080,(c,w,h)=>{
+  const g = c.createLinearGradient(0,0,w,h); g.addColorStop(0,"#f3f4f5"); g.addColorStop(1,"#e4e6e9"); c.fillStyle = g; c.fillRect(0,0,w,h);
+  for (let i=0;i<14;i++){ let x = rnd()*w, y = rnd()*h*.3; c.beginPath(); c.moveTo(x,y);
+    for (let k=0;k<8;k++){ x += (rnd()-.45)*110; y += 70+rnd()*90; c.lineTo(x,y); }
+    c.strokeStyle = i%3 ? "rgba(120,124,130,.35)" : "rgba(196,150,60,.55)"; c.lineWidth = .8+rnd()*2.2; c.stroke(); }
+  drawLogo(c, w/2, 300, 1.05);
+  goldText(c, NAME, w/2, 470, 84);
+  goldText(c, SUB, w/2, 535, 34, 600);
+});
+fontsReady.then(()=>redraw(marbleTex));
+const marble = new THREE.Mesh(new THREE.PlaneGeometry(1.6,2.7), new THREE.MeshStandardMaterial({map:marbleTex, roughness:.4, metalness:0}));
+marble.position.set(0,1.35,-3.46); scene.add(marble);
+const warmLed = new THREE.MeshBasicMaterial({color:0xffe7b0, toneMapped:false});
+box(.02,2.7,.02,warmLed,-.81,1.35,-3.45); box(.02,2.7,.02,warmLed,.81,1.35,-3.45); box(1.64,.02,.02,warmLed,0,2.7,-3.45);
+const wallGlow = new THREE.PointLight(0xffe2a8,.35,2.2); wallGlow.position.set(0,2.2,-3.1); scene.add(wallGlow);
+const walnutTex = canvasTex(256,1024,(c,w,h)=>{ c.fillStyle="#5d3726"; c.fillRect(0,0,w,h); for (let i=0;i<70;i++){ const x = rnd()*w; c.strokeStyle=`rgba(${rnd()>.5?30:120},${rnd()>.5?16:70},10,.25)`; c.lineWidth=1+rnd()*3; c.beginPath(); c.moveTo(x,0); c.bezierCurveTo(x+rnd()*20-10,h*.3,x+rnd()*20-10,h*.7,x+rnd()*14-7,h); c.stroke(); } });
+const walnutM = new THREE.MeshStandardMaterial({map:walnutTex, roughness:.45});
+const slatM = mat(0x111214,{roughness:.75});
+for (const s of [-1,1]) {
+  box(.7,2.7,.04,walnutM,s*1.15,1.35,-3.47);
+  box(.62,2.7,.02,mat(0x2a2c30),s*1.82,1.35,-3.48);
+  for (let i=0;i<6;i++) box(.055,2.7,.05,slatM,s*(1.55+i*.105),1.35,-3.45);
 }
-const sky = new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.2), new THREE.MeshBasicMaterial({map:skyTex, toneMapped:false}));
-sky.position.set(-2,1.75,-2.995); scene.add(sky);
-const frameM = mat(0xefe9df,{roughness:.6});
-box(1.22,.06,.08,frameM,-2,2.38,-2.96); box(1.22,.06,.08,frameM,-2,1.12,-2.96); box(.06,1.3,.08,frameM,-2.6,1.75,-2.96); box(.06,1.3,.08,frameM,-1.4,1.75,-2.96); box(.03,1.2,.05,frameM,-2,1.75,-2.96);
-box(1.4,.04,.18,frameM,-2,1.09,-2.9);
 
-// company plaque
-const plaqueTex = canvasTex(1024,300,(c,w,h)=>{
-  const g = c.createLinearGradient(0,0,0,h); g.addColorStop(0,"#3b2a1d"); g.addColorStop(1,"#2a1d13"); c.fillStyle = g; c.fillRect(0,0,w,h);
-  c.strokeStyle = "#c9953e"; c.lineWidth = 6; c.strokeRect(14,14,w-28,h-28);
-  c.direction = "rtl"; c.textAlign = "center"; c.fillStyle = "#e7b75d";
-  c.font = '700 96px "Readex Pro", Tahoma, sans-serif'; c.fillText("شركة أقصى الفرات", w/2, 140);
-  c.fillStyle = "#d9c3a0"; c.font = '500 46px "IBM Plex Sans Arabic", Tahoma, sans-serif'; c.fillText("للمقاولات العامة · كركوك", w/2, 230);
-});
-fontsReady.then(()=>redraw(plaqueTex));
-const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.5,.44), new THREE.MeshStandardMaterial({map:plaqueTex, roughness:.5, metalness:.1}));
-plaque.position.set(0.15,2.15,-2.985); scene.add(plaque);
+// ---------- manager desk ----------
+const white = mat(0xf7f7f6,{roughness:.18});
+const black = mat(0x1e2023,{roughness:.35});
+const desk = new THREE.Group(); desk.position.set(0,0,-2.35); scene.add(desk);
+box(1.9,.06,.85,white,0,.75,0,desk);
+for (const s of [-1,1]) { box(.09,.72,.8,white,s*.9,.36,0,desk); box(.095,.72,.1,black,s*.9,.36,.2,desk); box(.095,.72,.1,black,s*.9,.36,-.2,desk); }
+box(1.7,.5,.04,white,0,.47,.3,desk); box(.08,.5,.045,black,-.35,.47,.3,desk); box(.08,.5,.045,black,.35,.47,.3,desk);
+box(1.3,.04,.55,white,1.55,.62,-.05,desk); box(.5,.6,.5,white,1.95,.3,-.05,desk); box(.5,.04,.04,black,1.95,.45,.21,desk);
+// executive chair (white leather)
+const chair = new THREE.Group(); chair.position.set(0,0,-2.95); scene.add(chair);
+const leather = mat(0xf2f1ee,{roughness:.45}), chrome = mat(0xc8ccd0,{metalness:.9,roughness:.25});
+box(.58,.12,.55,leather,0,.5,0,chair); box(.58,.85,.12,leather,0,1.0,-.24,chair); box(.5,.14,.13,leather,0,1.45,-.25,chair);
+cyl(.03,.03,.38,chrome,0,.27,0,chair);
+for (let i=0;i<5;i++){ const a = i*Math.PI*2/5; const leg = box(.32,.03,.04,chrome,Math.cos(a)*.15,.05,Math.sin(a)*.15,chair); leg.rotation.y = -a; }
+// desk props: wire tray, name plate, papers
+const tray = new THREE.Group(); tray.position.set(-.55,.78,-2.45); scene.add(tray);
+for (let i=0;i<2;i++) box(.34,.01,.26,black,0,.02+i*.08,0,tray);
+for (const x of [-.16,.16]) box(.01,.1,.26,black,x,.05,0,tray);
+box(.21,.003,.297,mat(0xffffff,{roughness:.9}),-.55,.88,-2.45);
+const plateTex = canvasTex(512,128,(c,w,h)=>{ c.fillStyle="#1e2023"; c.fillRect(0,0,w,h); c.direction="rtl"; c.textAlign="center"; c.fillStyle="#e9c77e"; c.font='600 40px "IBM Plex Sans Arabic", Tahoma'; c.fillText("المدير المفوض", w/2, 58); c.font='500 32px "IBM Plex Sans Arabic", Tahoma'; c.fillStyle="#f1f1f1"; c.fillText("حسين حمود عبد", w/2, 104); });
+fontsReady.then(()=>redraw(plateTex));
+const plate = new THREE.Mesh(new THREE.BoxGeometry(.3,.075,.01), [black,black,black,black,new THREE.MeshStandardMaterial({map:plateTex, roughness:.3}),black]);
+plate.position.set(.05,.82,-1.96); plate.rotation.x = -.35; plate.castShadow = true; scene.add(plate);
 
-// wall clock
-const clockTex = canvasTex(256,256,(c,w,h)=>{
-  const t = kirkukNow(), r = w/2;
-  c.clearRect(0,0,w,h); c.fillStyle="#f6f1e7"; c.beginPath(); c.arc(r,r,r-4,0,Math.PI*2); c.fill();
-  c.lineWidth=10; c.strokeStyle="#3b2a1d"; c.stroke();
-  c.fillStyle="#3b2a1d"; for (let i=0;i<12;i++){ const a=i*Math.PI/6; c.save(); c.translate(r,r); c.rotate(a); c.fillRect(-3,-r+16,6,i%3?12:22); c.restore(); }
-  const hand=(a,len,wd,col)=>{ c.save(); c.translate(r,r); c.rotate(a); c.fillStyle=col; c.fillRect(-wd/2,-len,wd,len+12); c.restore(); };
-  hand(((t.h%12)+t.m/60)*Math.PI/6, r*.5, 9, "#2a1d13");
-  hand((t.m+t.s/60)*Math.PI/30, r*.72, 6, "#2a1d13");
-  hand(t.s*Math.PI/30, r*.78, 2, "#c4472f");
-  c.fillStyle="#2a1d13"; c.beginPath(); c.arc(r,r,8,0,Math.PI*2); c.fill();
-});
-const clock = new THREE.Mesh(new THREE.CircleGeometry(.2,48), new THREE.MeshStandardMaterial({map:clockTex, roughness:.4, transparent:true}));
-clock.position.set(1.65,2.2,-2.98); scene.add(clock);
-
-// ---------- desk + chair ----------
-const walnut = mat(0x5b3a24,{roughness:.55});
-const desk = new THREE.Group(); scene.add(desk);
-box(1.8,.05,.8,walnut,0,.75,-2.2,desk);
-box(.05,.73,.74,walnut,-.85,.365,-2.2,desk); box(.05,.73,.74,walnut,.85,.365,-2.2,desk);
-box(1.66,.45,.03,walnut,0,.5,-2.55,desk);
-box(.45,.55,.7,walnut,.6,.45,-2.2,desk);
-for (const y of [.33,.58]) box(.4,.008,.01,mat(0xc9a36a,{metalness:.7,roughness:.3}),.6,y,-1.845,desk);
-
-const chair = new THREE.Group(); chair.position.set(-.15,0,-1.45); chair.rotation.y = .5; scene.add(chair);
-const leather = mat(0x2a2522,{roughness:.6});
-box(.52,.08,.5,leather,0,.48,0,chair); box(.52,.6,.07,leather,0,.84,.24,chair);
-box(.05,.42,.05,mat(0x777777,{metalness:.8,roughness:.3}),0,.24,0,chair);
-for (let i=0;i<5;i++){ const a=i*Math.PI*2/5; box(.3,.03,.04,mat(0x333333),Math.cos(a)*.15,.04,Math.sin(a)*.15,chair).rotation.y=-a; }
-
-// desk props: papers, mug, tender folders
-box(.21,.004,.297,mat(0xf7f4ec,{roughness:.9}),-.55,.777,-2.15).rotation.y = .2;
-box(.21,.004,.297,mat(0xf1ede2,{roughness:.9}),-.5,.781,-2.12).rotation.y = -.05;
-const mug = new THREE.Mesh(new THREE.CylinderGeometry(.04,.035,.1,20), mat(0xf2ede4,{roughness:.4})); mug.position.set(.3,.825,-2.0); mug.castShadow = true; scene.add(mug);
-const tea = new THREE.Mesh(new THREE.CylinderGeometry(.036,.036,.005,20), mat(0x7a2e12,{roughness:.2})); tea.position.set(.3,.865,-2.0); scene.add(tea);
-[0x2f5d8a,0x8a2f2f,0x2f7a4d].forEach((col,i)=> box(.24,.035,.32,mat(col,{roughness:.6}),-.72,.79+i*.036,-2.42).rotation.y = .04*i);
-
-// ---------- laptop ----------
-const laptop = new THREE.Group(); laptop.position.set(-.08,.775,-2.25); scene.add(laptop);
-const alu = mat(0x9ea3a8,{metalness:.7,roughness:.35});
-box(.36,.016,.25,alu,0,.008,0,laptop);
-box(.3,.002,.11,mat(0x2b2d30),0,.017,-.03,laptop);
-box(.1,.002,.06,mat(0x55595e),0,.017,.07,laptop);
-const hinge = new THREE.Group(); hinge.position.set(0,.016,-.125); hinge.rotation.x = -.28; laptop.add(hinge);
-box(.36,.24,.01,alu,0,.12,0,hinge);
+// ---------- laptop (black) ----------
+const laptop = new THREE.Group(); laptop.position.set(.45,.78,-2.4); laptop.rotation.y = -.25; scene.add(laptop);
+const lapM = mat(0x18191b,{roughness:.4});
+box(.36,.02,.25,lapM,0,.01,0,laptop);
+box(.31,.002,.11,mat(0x0e0f10),0,.021,-.03,laptop);
+const hinge = new THREE.Group(); hinge.position.set(0,.02,-.125); hinge.rotation.x = -.3; laptop.add(hinge);
+box(.36,.24,.012,lapM,0,.12,0,hinge);
 const screenTex = canvasTex(640,420,null);
 let screenState = {mode:"home", text:""};
 screenTex.userData.draw = (c,w,h)=>{
-  if (screenState.mode === "off") { c.fillStyle="#050505"; c.fillRect(0,0,w,h); return; }
-  const g = c.createLinearGradient(0,0,w,h); g.addColorStop(0,"#163a5c"); g.addColorStop(1,"#0d1b2c"); c.fillStyle=g; c.fillRect(0,0,w,h);
-  c.direction="rtl"; c.textAlign="center"; c.fillStyle="#e7b75d"; c.font='700 52px "Readex Pro", Tahoma, sans-serif'; c.fillText("أقصى الفرات", w/2, 150);
-  c.fillStyle="#cfe0f0"; c.font='500 30px "IBM Plex Sans Arabic", Tahoma, sans-serif';
-  if (screenState.mode === "home") { c.fillText(hm(kirkukNow()), w/2, 215); c.fillStyle="#8fb0cf"; c.font='500 24px "IBM Plex Sans Arabic", Tahoma, sans-serif'; c.fillText("جاهز يستلم أوامر", w/2, 270); }
-  else { c.fillText(screenState.text, w/2, 230); if (screenState.mode === "busy") { const p = (performance.now()/900)%1; c.fillStyle="#2b5a85"; c.fillRect(w*.25,280,w*.5,10); c.fillStyle="#e7b75d"; c.fillRect(w*.25,280,w*.5*p,10); } }
-  c.fillStyle="rgba(255,255,255,.08)"; c.fillRect(0,h-40,w,40);
+  if (screenState.mode === "off") { c.fillStyle="#040404"; c.fillRect(0,0,w,h); return; }
+  c.fillStyle="#eaf2fb"; c.fillRect(0,0,w,h); c.fillStyle="#1d5fa8"; c.fillRect(0,0,w,46);
+  c.direction="rtl"; c.textAlign="center";
+  c.fillStyle="#fff"; c.font='600 24px "IBM Plex Sans Arabic", Tahoma'; c.fillText("منصة الإعلانات · أقصى الفرات", w/2, 31);
+  if (screenState.mode === "home") {
+    c.fillStyle="#1d2124"; c.font='700 48px "Readex Pro", Tahoma'; c.fillText(hm(kirkukNow()), w/2, 170);
+    c.fillStyle="#5f6870"; c.font='500 24px "IBM Plex Sans Arabic", Tahoma'; c.fillText("جاهز يستلم أوامر", w/2, 220);
+    c.fillStyle="#c9d9ea"; for (let i=0;i<4;i++) c.fillRect(80, 260+i*30, w-160-(i%2)*80, 14);
+  } else {
+    c.fillStyle="#1d2124"; c.font='600 34px "IBM Plex Sans Arabic", Tahoma'; c.fillText(screenState.text, w/2, 200);
+    if (screenState.mode === "busy") { const p = (performance.now()/900)%1; c.fillStyle="#c9d9ea"; c.fillRect(w*.2,250,w*.6,12); c.fillStyle="#1d5fa8"; c.fillRect(w*.2,250,w*.6*p,12); }
+  }
 };
 redraw(screenTex);
 const screen = new THREE.Mesh(new THREE.PlaneGeometry(.33,.215), new THREE.MeshBasicMaterial({map:screenTex, toneMapped:false}));
-screen.position.set(0,.125,.0056); hinge.add(screen);
-const screenGlow = new THREE.PointLight(0x7fb2e5, .35, 1.2); screenGlow.position.set(0,.15,.15); hinge.add(screenGlow);
+screen.position.set(0,.125,.0066); hinge.add(screen);
 
-// ---------- printer ----------
-const stand = new THREE.Group(); stand.position.set(1.5,0,-2.55); scene.add(stand);
-box(.62,.64,.5,mat(0xe9e3d8,{roughness:.7}),0,.32,0,stand);
-box(.56,.004,.01,mat(0x9a8f80),0,.32,.253,stand);
-const printer = new THREE.Group(); printer.position.set(0,.64,0); stand.add(printer);
-const pBody = mat(0x26282c,{roughness:.45});
-box(.46,.17,.34,pBody,0,.085,0,printer);
-box(.44,.012,.3,mat(0x34373c,{roughness:.3}),0,.176,.005,printer);
-box(.3,.03,.05,mat(0x111214),0,.07,.17,printer);
-box(.07,.03,.01,mat(0x0f4f8a,{roughness:.3}),.15,.135,.172,printer);
-const ledM = new THREE.MeshBasicMaterial({color:0x62c48d}); const led = new THREE.Mesh(new THREE.CircleGeometry(.008,12), ledM); led.position.set(.2,.135,.1715); printer.add(led);
-const brandTex = canvasTex(256,64,(c,w,h)=>{ c.clearRect(0,0,w,h); c.fillStyle="#cfd3d8"; c.font='700 40px Arial, sans-serif'; c.textAlign="center"; c.textBaseline="middle"; c.fillText("EPSON", w/2, h/2); });
-const brand = new THREE.Mesh(new THREE.PlaneGeometry(.1,.025), new THREE.MeshBasicMaterial({map:brandTex, transparent:true})); brand.position.set(-.13,.135,.1715); printer.add(brand);
-box(.22,.13,.01,mat(0xf7f4ec),0,.23,-.15,printer).rotation.x = -.35;
-const paperM = mat(0xfbf9f3,{roughness:.9});
-const paper = new THREE.Mesh(new THREE.BoxGeometry(.21,.002,.297), paperM); paper.castShadow = true; paper.visible = false; printer.add(paper);
-const printedTex = canvasTex(210,297,(c,w,h)=>{ c.fillStyle="#fbf9f3"; c.fillRect(0,0,w,h); c.fillStyle="#2a1d13"; c.direction="rtl"; c.textAlign="center"; c.font='700 16px "Readex Pro", Tahoma'; c.fillText("شركة أقصى الفرات", w/2, 34); c.fillStyle="#c9953e"; c.fillRect(20,44,w-40,2); c.fillStyle="#555"; for (let i=0;i<12;i++) c.fillRect(24+(i%3)*8, 70+i*14, w-60-(i%4)*14, 4); c.fillStyle="#2a1d13"; c.font='500 12px Tahoma'; c.fillText("صفحة تجربة", w/2, h-24); });
+// ---------- printer (black multifunction on the desk return) ----------
+const printer = new THREE.Group(); printer.position.set(1.6,.64,-2.4); printer.rotation.y = -.15; scene.add(printer);
+const pBody = mat(0x1c1d20,{roughness:.4});
+box(.44,.2,.38,pBody,0,.1,0,printer);
+box(.42,.02,.33,mat(0x2a2c30,{roughness:.25}),0,.21,-.01,printer);
+box(.3,.035,.04,mat(0x0b0b0c),0,.075,.19,printer);
+box(.16,.05,.01,mat(0x2a2c30),-.1,.15,.191,printer);
+const ledM = new THREE.MeshBasicMaterial({color:0x2fbf71}); const led = new THREE.Mesh(new THREE.CircleGeometry(.008,12), ledM); led.position.set(.17,.15,.1915); printer.add(led);
+[0x111111,0x16a3d9,0xd8318a,0xf2d22e].forEach((col,i)=> box(.03,.07,.02,mat(col,{roughness:.3}),.23,.06+0*i,.12-i*.035,printer));
+box(.22,.12,.01,mat(0xfbfbfb),0,.27,-.17,printer).rotation.x = -.35;
+const paperM = mat(0xfdfdfb,{roughness:.9});
+const printedTex = canvasTex(210,297,(c,w,h)=>{ c.fillStyle="#fdfdfb"; c.fillRect(0,0,w,h); drawLogo(c,w/2,40,.16); c.direction="rtl"; c.textAlign="center"; c.fillStyle="#7a5a1e"; c.font='700 15px "Readex Pro", Tahoma'; c.fillText(NAME+" "+SUB, w/2, 66); c.fillStyle="#c9953e"; c.fillRect(20,74,w-40,1.5); c.fillStyle="#666"; for (let i=0;i<11;i++) c.fillRect(24+(i%3)*8, 96+i*14, w-60-(i%4)*14, 4); c.fillStyle="#333"; c.font='500 11px Tahoma'; c.fillText("صفحة تجربة", w/2, h-20); });
 fontsReady.then(()=>redraw(printedTex));
-paper.material = [paperM,paperM,new THREE.MeshStandardMaterial({map:printedTex, roughness:.9}),paperM,paperM,paperM];
+const paper = new THREE.Mesh(new THREE.BoxGeometry(.21,.002,.297), [paperM,paperM,new THREE.MeshStandardMaterial({map:printedTex, roughness:.9}),paperM,paperM,paperM]);
+paper.castShadow = true; paper.visible = false; printer.add(paper);
 let printAnim = null;
 
-// ---------- archive shelf ----------
-const shelf = new THREE.Group(); shelf.position.set(-3.25,0,-1.2); shelf.rotation.y = Math.PI/2; scene.add(shelf);
-const oak = mat(0x7a5236,{roughness:.6});
-box(1.1,1.95,.03,oak,0,.975,-.17,shelf); box(.03,1.95,.36,oak,-.535,.975,0,shelf); box(.03,1.95,.36,oak,.535,.975,0,shelf);
-const binderCols = [0x2f5d8a,0x8a2f2f,0x2f7a4d,0xc9953e,0x4a4a4a,0x6b4a8a];
-[.06,.5,.94,1.38,1.92].forEach((y,row)=>{
-  box(1.07,.03,.34,oak,0,y,0,shelf);
-  if (row < 4) { let x = -.48; let k = row*3;
-    while (x < .42) { const wdt = .05 + ((k*7)%3)*.012, ht = .3 + ((k*5)%3)*.02;
-      box(wdt,ht,.27,mat(binderCols[k%binderCols.length],{roughness:.5}),x+wdt/2,y+.015+ht/2,.02,shelf); x += wdt+.006; k++; } }
+// ---------- flags ----------
+function flagTex(kind){ return canvasTex(512,768,(c,w,h)=>{
+  if (kind === "iraq") {
+    c.fillStyle="#ce1126"; c.fillRect(0,0,w,h/3); c.fillStyle="#ffffff"; c.fillRect(0,h/3,w,h/3); c.fillStyle="#111"; c.fillRect(0,2*h/3,w,h/3);
+    c.fillStyle="#007a3d"; c.direction="rtl"; c.textAlign="center"; c.font='700 120px "Readex Pro", Tahoma'; c.fillText("الله أكبر", w/2, h/2+42);
+  } else {
+    c.fillStyle="#fbfbfa"; c.fillRect(0,0,w,h); drawLogo(c,w/2,250,.95); goldText(c,NAME,w/2,430,92); goldText(c,SUB,w/2,500,40,600);
+  }
+  c.fillStyle="#d4a640"; c.fillRect(0,h-26,w,26); for (let x=0;x<w;x+=10){ c.fillRect(x,h-26,5,26); }
+}); }
+const goldM = mat(0xc9a050,{metalness:.85,roughness:.28});
+function makeFlag(kind, x, z, ry, side){
+  const g = new THREE.Group(); g.position.set(x,0,z); g.rotation.y = ry; scene.add(g);
+  cyl(.17,.2,.04,goldM,0,.02,0,g,32); cyl(.015,.015,2.25,goldM,0,1.14,0,g); const tip = new THREE.Mesh(new THREE.SphereGeometry(.035,16,12), goldM); tip.position.y = 2.29; g.add(tip);
+  const geo = new THREE.PlaneGeometry(.62,1.25,24,1); const pos = geo.attributes.position;
+  for (let i=0;i<pos.count;i++){ let u = (pos.getX(i)+.31)/.62; if (side < 0) u = 1-u; pos.setZ(i, Math.sin(u*Math.PI*3.2)*.045*u); }
+  geo.computeVertexNormals();
+  const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({map:flagTex(kind), roughness:.75, side:THREE.DoubleSide}));
+  cloth.position.set(side*.325,1.55,0); cloth.castShadow = true; g.add(cloth);
+  return g;
+}
+makeFlag("iraq", 2.35, -3.15, Math.PI*.1, 1);
+makeFlag("company", -2.35, -3.15, -Math.PI*.1, -1);
+
+// ---------- seating: white sofas, black side table, glass table ----------
+function sofa(seats, x, z, ry){
+  const g = new THREE.Group(); g.position.set(x,0,z); g.rotation.y = ry; scene.add(g);
+  const w = seats*.68+.3, sm = mat(0xf5f5f3,{roughness:.5}), feet = mat(0x5a3524,{roughness:.6});
+  box(w,.32,.85,sm,0,.3,0,g); box(w,.45,.18,sm,0,.68,-.34,g);
+  for (const s of [-1,1]) box(.17,.32,.85,sm,s*(w/2-.085),.6,0,g);
+  for (let i=0;i<seats;i++) box(.64,.1,.62,sm,(i-(seats-1)/2)*.66,.5,.06,g);
+  for (const sx of [-1,1]) for (const sz of [-1,1]) box(.05,.12,.05,feet,sx*(w/2-.08),.06,sz*.36,g);
+  return g;
+}
+sofa(3, 3.45, .55, -Math.PI/2);
+sofa(1, 3.3, -1.55, -Math.PI/2);
+const st = new THREE.Group(); st.position.set(3.45,0,-.75); scene.add(st);
+box(.36,.02,.36,black,0,.5,0,st); for (const sx of [-1,1]) for (const sz of [-1,1]) { const l = box(.015,.5,.015,black,sx*.15,.25,sz*.15,st); l.rotation.z = sx*.08; }
+const gt = new THREE.Group(); gt.position.set(1.2,0,-.3); scene.add(gt);
+const glass = new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.015,48), new THREE.MeshStandardMaterial({color:0xa9d6da, roughness:.05, metalness:.2, transparent:true, opacity:.5})); glass.scale.z = .7; glass.position.y = .45; gt.add(glass);
+for (let i=0;i<4;i++){ const petal = new THREE.Mesh(new THREE.SphereGeometry(.2,20,14), mat(0xf7f7f6,{roughness:.3})); const a = i*Math.PI/2+.4; petal.scale.set(1,.05,.55); petal.position.set(Math.cos(a)*.18,.03,Math.sin(a)*.12); petal.rotation.y = -a; petal.castShadow = true; gt.add(petal); }
+cyl(.05,.08,.42,mat(0xf7f7f6,{roughness:.3}),0,.24,0,gt);
+const basket = cyl(.11,.08,.08,goldM,0,.5,0,gt); basket.material = mat(0xd9b25a,{metalness:.6,roughness:.4});
+for (let i=0;i<9;i++){ const sw = new THREE.Mesh(new THREE.SphereGeometry(.025,10,8), mat([0xe94b3c,0x2f80ed,0x27ae60,0xf2c94c][i%4],{roughness:.3})); sw.position.set(Math.cos(i)*.06,.55,Math.sin(i)*.06); gt.add(sw); }
+
+// ---------- TV on the right wall (shows Kirkuk time and the day's brief) ----------
+const tvTex = canvasTex(800,450,null);
+tvTex.userData.draw = (c,w,h)=>{
+  const g = c.createLinearGradient(0,0,0,h); g.addColorStop(0,"#163f73"); g.addColorStop(1,"#0d2747"); c.fillStyle=g; c.fillRect(0,0,w,h);
+  c.direction="rtl"; c.textAlign="right";
+  c.fillStyle="#e9c77e"; c.font='700 40px "Readex Pro", Tahoma'; c.fillText(NAME, w-40, 70);
+  c.fillStyle="#cfe0f0"; c.font='500 26px "IBM Plex Sans Arabic", Tahoma'; c.fillText(today(), w-40, 112);
+  c.textAlign="left"; c.fillStyle="#ffffff"; c.font='700 110px "Readex Pro", Tahoma'; c.fillText(hm(kirkukNow()), 40, 140);
+  c.textAlign="right"; c.fillStyle="#9fc0e2"; c.font='600 26px "IBM Plex Sans Arabic", Tahoma'; c.fillText("نشرة المناقصات توصل على البوت كل صبح", w-40, 230);
+  c.fillStyle="rgba(255,255,255,.12)"; for (let i=0;i<4;i++) c.fillRect(40, 265+i*42, w-80, 30);
+  c.fillStyle="#e9c77e"; c.font='500 20px "IBM Plex Sans Arabic", Tahoma';
+  ["بغداد","الأنبار","نينوى","كركوك"].forEach((g2,i)=>{ c.fillText(g2, w-56, 287+i*42); });
+};
+redraw(tvTex);
+const tv = new THREE.Group(); tv.position.set(3.97,1.75,-.7); tv.rotation.y = -Math.PI/2; scene.add(tv);
+box(1.15,.67,.04,mat(0x0c0c0d,{roughness:.3}),0,0,0,tv);
+const tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(1.1,.62), new THREE.MeshBasicMaterial({map:tvTex, toneMapped:false})); tvScreen.position.z = .021; tv.add(tvScreen);
+const frame = new THREE.Group(); frame.position.set(3.98,1.85,1.3); frame.rotation.y = -Math.PI/2; scene.add(frame);
+box(.36,.46,.02,mat(0x141414),0,0,0,frame); box(.3,.4,.005,mat(0x6b6f74,{roughness:.6}),0,0,.012,frame);
+
+// ---------- project posters on the left wall ----------
+const posters = new THREE.Group(); posters.position.set(-3.98,1.75,-.6); posters.rotation.y = Math.PI/2; scene.add(posters);
+["مشروع النقل العام","مشروع بناية مدرسة","مشروع تأهيل طرق","مشروع مجمع سكني"].forEach((t,i)=>{
+  const tex = canvasTex(360,520,(c,w,h)=>{ c.fillStyle="#151719"; c.fillRect(0,0,w,h);
+    const sky = c.createLinearGradient(0,30,0,300); sky.addColorStop(0,["#6aa6d8","#d98c4a","#7fb1d6","#5d8fc4"][i]); sky.addColorStop(1,"#e7e1d4"); c.fillStyle=sky; c.fillRect(24,24,w-48,280);
+    c.fillStyle="#8b8f94"; c.fillRect(60,170+i*6,w-120,134-i*6); c.fillStyle="#4a4d52"; for (let k=0;k<6;k++) c.fillRect(76+k*36,190+i*6,22,26);
+    c.direction="rtl"; c.textAlign="center"; c.fillStyle="#e9c77e"; c.font='700 30px "Readex Pro", Tahoma'; c.fillText(t, w/2, 360);
+    c.fillStyle="#bfc3c7"; c.font='500 20px "IBM Plex Sans Arabic", Tahoma'; c.fillText(NAME+" "+SUB, w/2, 400);
+    c.strokeStyle="#c9953e"; c.lineWidth=3; c.strokeRect(10,10,w-20,h-20); });
+  fontsReady.then(()=>redraw(tex));
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(.5,.72), new THREE.MeshStandardMaterial({map:tex, roughness:.35}));
+  p.position.set(-1.05+i*.7,0,0); posters.add(p);
 });
 
-// ---------- lamp ----------
-const lamp = new THREE.Group(); lamp.position.set(.72,.775,-2.48); scene.add(lamp);
-const brass = mat(0xb08a4a,{metalness:.8,roughness:.3});
-const lb = new THREE.Mesh(new THREE.CylinderGeometry(.08,.09,.025,24), brass); lb.position.y = .012; lb.castShadow = true; lamp.add(lb);
-const arm = box(.018,.45,.018,brass,0,.24,0,lamp); arm.rotation.z = .25;
-const arm2 = box(.018,.3,.018,brass,-.12,.52,.05,lamp); arm2.rotation.z = -1.0;
-const shade = new THREE.Mesh(new THREE.ConeGeometry(.1,.14,24,1,true), mat(0x1f3b2e,{side:THREE.DoubleSide,roughness:.4})); shade.position.set(-.25,.55,.07); shade.rotation.z = .5; lamp.add(shade);
-const bulb = new THREE.Mesh(new THREE.SphereGeometry(.03,16,12), new THREE.MeshBasicMaterial({color:0xffe2a8})); bulb.position.set(-.27,.51,.07); lamp.add(bulb);
-const lampLight = new THREE.SpotLight(0xffc77a, 3, 3, .9, .5, 1.5); lampLight.position.set(-.27,.5,.07); lampLight.castShadow = true; lampLight.shadow.mapSize.set(1024,1024); lamp.add(lampLight);
-const lampTarget = new THREE.Object3D(); lampTarget.position.set(-.55,-.1,.25); lamp.add(lampTarget); lampLight.target = lampTarget;
-let lampOn = true;
-
-// plant
-const pot = new THREE.Mesh(new THREE.CylinderGeometry(.16,.12,.32,24), mat(0xb5603a,{roughness:.8})); pot.position.set(2.85,.16,-2.55); pot.castShadow = true; scene.add(pot);
-for (let i=0;i<9;i++){ const leaf = new THREE.Mesh(new THREE.ConeGeometry(.05,.7,6), mat(0x3f6b3a,{roughness:.7})); const a = i*0.7; leaf.position.set(2.85+Math.cos(a)*.05,.62,-2.55+Math.sin(a)*.05); leaf.rotation.set(Math.sin(a)*.35,0,Math.cos(a)*.35); leaf.castShadow = true; scene.add(leaf); }
-
 // ---------- lighting ----------
-const hemi = new THREE.HemisphereLight(0xfff1dd, 0x3a2a1c, .45); scene.add(hemi);
-const sunL = new THREE.DirectionalLight(0xfff3dc, .9); sunL.position.set(-2.6,3.4,-4.5); sunL.target.position.set(-.5,0,-1); scene.add(sunL.target);
-sunL.castShadow = true; sunL.shadow.mapSize.set(2048,2048); Object.assign(sunL.shadow.camera,{left:-4,right:4,top:4,bottom:-4,near:.5,far:12}); sunL.shadow.bias = -.0006; scene.add(sunL);
-const ceiling = new THREE.PointLight(0xffe6c4, .35, 8); ceiling.position.set(.5,2.9,-.5); scene.add(ceiling);
-function applyDaylight(){
-  const hr = drawSky();
-  const day = hr >= 6.5 && hr < 17 ? 1 : (hr >= 5 && hr < 6.5) || (hr >= 17 && hr < 18.5) ? .5 : 0;
-  sunL.intensity = .15 + .85*day; sunL.color.set(day === .5 ? 0xffb879 : day ? 0xfff3dc : 0x8fa3d6);
-  hemi.intensity = .25 + .3*day;
+const hemi = new THREE.HemisphereLight(0xf7fbff, 0xb9b1a4, .55); scene.add(hemi);
+const amb = new THREE.AmbientLight(0xffffff, .25); scene.add(amb);
+const key = new THREE.DirectionalLight(0xf2f7ff, .55); key.position.set(1.5,6,2.5); key.target.position.set(0,0,-1.5); scene.add(key.target);
+key.castShadow = true; key.shadow.mapSize.set(2048,2048); Object.assign(key.shadow.camera,{left:-5,right:5,top:5,bottom:-5,near:.5,far:14}); key.shadow.bias = -.0005; scene.add(key);
+const fillA = new THREE.PointLight(0xe8f1ff,.35,7); fillA.position.set(-2,2.8,-1); scene.add(fillA);
+const fillB = new THREE.PointLight(0xe8f1ff,.35,7); fillB.position.set(2,2.8,0); scene.add(fillB);
+let lightsOn = true;
+function setLights(on){
+  lightsOn = on;
+  leds.forEach(l => l.material = on ? ledOn : ledOff); downs.forEach(d => d.material = on ? spotOn : ledOff);
+  hemi.intensity = on ? .55 : .14; amb.intensity = on ? .25 : .05; key.intensity = on ? .55 : .06; fillA.intensity = fillB.intensity = on ? .35 : 0;
+  wallGlow.intensity = on ? .35 : .9;
+  scene.background.set(on ? 0xdfe2e5 : 0x1a1c1f);
 }
-applyDaylight();
 
 // ---------- hotspots ----------
 const HOT = {
-  laptop:{name:"اللابتوب", at:new THREE.Vector3(-.08,1.12,-2.3), obj:laptop},
-  printer:{name:"الطابعة", at:new THREE.Vector3(1.5,.98,-2.55), obj:stand},
-  archive:{name:"الأرشيف", at:new THREE.Vector3(-3.1,1.55,-1.2), obj:shelf},
-  lamp:{name:"المصباح", at:new THREE.Vector3(.48,1.42,-2.42), obj:lamp},
-  clock:{name:"الساعة", at:new THREE.Vector3(1.65,2.48,-2.95), obj:clock},
-  window:{name:"الشباك", at:new THREE.Vector3(-2,2.5,-2.95), obj:sky}
+  laptop:{name:"اللابتوب", sub:"أوامر وتشغيل", at:new THREE.Vector3(.45,1.12,-2.42), obj:laptop},
+  printer:{name:"الطابعة", sub:"طباعة", at:new THREE.Vector3(1.6,1.0,-2.4), obj:printer},
+  tv:{name:"الشاشة", sub:"الوقت والنشرة", at:new THREE.Vector3(3.9,2.2,-.7), obj:tv},
+  logo:{name:"الشركة", sub:"معلومات", at:new THREE.Vector3(0,2.45,-3.4), obj:marble},
+  projects:{name:"المشاريع", sub:"الأرشيف", at:new THREE.Vector3(-3.9,2.25,-.6), obj:posters},
+  lights:{name:"الإضاءة", sub:"شغّل وطفّي", at:new THREE.Vector3(-1.1,2.85,.4), obj:leds[1]}
 };
 const spotsEl = $("spots");
 Object.entries(HOT).forEach(([k,h])=>{
-  const b = document.createElement("button"); b.type = "button"; b.className = "spot"; b.textContent = h.name; b.dataset.k = k;
+  const b = document.createElement("button"); b.type = "button"; b.className = "spot"; b.textContent = h.name;
   b.addEventListener("click", ()=>open(k)); spotsEl.appendChild(b); h.el = b;
   h.obj.traverse(o => { o.userData.hot = k; });
 });
@@ -345,28 +403,37 @@ canvas.addEventListener("pointerdown", e => down = {x:e.clientX,y:e.clientY});
 canvas.addEventListener("pointerup", e => { if (!down) return; const mv = Math.hypot(e.clientX-down.x,e.clientY-down.y); down = null; if (mv < 6) { const k = pick(e); if (k) open(k); } });
 canvas.addEventListener("pointermove", e => { if (e.pointerType === "mouse" && !down) canvas.style.cursor = pick(e) ? "pointer" : "grab"; });
 
-// camera glide
 let tween = null;
 const VIEWS = {
-  laptop:[[.45,1.25,-1.45],[-.08,.92,-2.3]], printer:[[1.9,1.35,-1.5],[1.5,.78,-2.55]],
-  archive:[[-1.6,1.45,-.6],[-3.1,1.05,-1.2]], lamp:[[1.2,1.4,-1.4],[.5,1.05,-2.4]],
-  clock:[[1.2,1.9,-.8],[1.65,2.1,-2.95]], window:[[-.9,1.75,-.4],[-2,1.7,-2.95]], home:[[2.3,1.75,1.4],[-.2,.95,-1.9]]
+  laptop:[[.75,1.35,-1.45],[.4,.9,-2.4]], printer:[[1.85,1.35,-1.5],[1.55,.75,-2.4]],
+  tv:[[1.6,1.65,-.4],[3.95,1.7,-.7]], logo:[[0,1.6,-.6],[0,1.55,-3.45]],
+  projects:[[-1.6,1.7,-.2],[-3.95,1.7,-.6]], lights:[[0,1.3,2.4],[-.6,2.6,-.5]], home:[[.6,1.7,3.2],[0,1.05,-2]]
 };
 function glide(k){ const v = VIEWS[k]; if (!v) return; tween = {t0:performance.now(), dur:reduced?1:900, fp:camera.position.clone(), ft:controls.target.clone(), tp:new THREE.Vector3(...v[0]), tt:new THREE.Vector3(...v[1])}; }
 
-// ---------- state + panel ----------
-let current = null, laptopOn = true, busy = false;
-const log = [];
-function addLog(text){ const t = kirkukNow(); log.unshift({text, at:hm(t)}); if (log.length > 12) log.pop(); renderLog(); }
-function renderLog(){ $("log").innerHTML = log.length ? log.map(l=>`<li><span>${l.text}</span><time>${l.at}</time></li>`).join("") : `<li><span style="color:var(--muted)">ماكو أوامر بعد</span></li>`; }
+// ---------- bot link ----------
 const PIN_KEY = "aqsa-office-pin";
 function getPin(){ try { return localStorage.getItem(PIN_KEY) || ""; } catch(e) { return ""; } }
 function setPin(v){ try { if (v) localStorage.setItem(PIN_KEY, v); else localStorage.removeItem(PIN_KEY); } catch(e) {} renderMode(); }
-function renderMode(){ const on = !!getPin(); $("mode").textContent = on ? "مربوط بالبوت" : "غير مربوط"; }
+function renderMode(){
+  $("mode").textContent = !LIVE ? "تجربة" : getPin() ? "مربوط بالبوت" : "غير مربوط";
+  $("note").textContent = LIVE ? "كل أمر من اللابتوب أو الطابعة يوصل للبوت ولبرنامج المكتب على اللابتوب." : "هاي نسخة تجربة. النسخة المربوطة بالبوت تنفتح من رابط الوسيط /office.";
+}
 let afterPin = null;
-let real = {text:"اربط بالبوت حتى تشوف إذا اللابتوب الحقيقي متصل."};
+let real = {text: LIVE ? "اربط بالبوت حتى تشوف إذا اللابتوب الحقيقي متصل." : "نسخة تجربة: الأوامر تتمثل بالصفحة بس."};
+async function send(cmd, label){
+  if (!LIVE) return false;
+  const pin = getPin();
+  if (!pin) { afterPin = current; current = "pin"; renderSheet(); return false; }
+  try {
+    const r = await fetch("/office/cmd", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({pin, cmd, text:label})});
+    if (r.status === 403) { setPin(""); addLog("الرمز غلط، اكتبه مرة ثانية"); afterPin = current; current = "pin"; renderSheet(); return false; }
+    if (!r.ok) throw new Error(r.status);
+    addLog("وصل للبوت ✓"); return true;
+  } catch(e) { addLog("ما وصل للبوت، تأكد من النت"); return false; }
+}
 async function checkReal(){
-  const pin = getPin(); if (!pin) return;
+  const pin = getPin(); if (!LIVE || !pin) return;
   try {
     const r = await fetch("/office/status", {headers:{"X-Office-Pin":pin}});
     if (!r.ok) return;
@@ -378,16 +445,12 @@ async function checkReal(){
     if (current === "laptop") renderSheet();
   } catch(e) {}
 }
-async function send(cmd, label){
-  const pin = getPin();
-  if (!pin) { afterPin = current; current = "pin"; renderSheet(); return false; }
-  try {
-    const r = await fetch("/office/cmd", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({pin, cmd, text:label})});
-    if (r.status === 403) { setPin(""); addLog("الرمز غلط، اكتبه مرة ثانية"); afterPin = current; current = "pin"; renderSheet(); return false; }
-    if (!r.ok) throw new Error(r.status);
-    addLog("وصل للبوت ✓"); return true;
-  } catch(e) { addLog("ما وصل للبوت، تأكد من النت"); return false; }
-}
+
+// ---------- panel ----------
+let current = null, laptopOn = true, busy = false;
+const log = [];
+function addLog(text){ log.unshift({text, at:hm(kirkukNow())}); if (log.length > 12) log.pop(); renderLog(); }
+function renderLog(){ $("log").innerHTML = log.length ? log.map(l=>`<li><span>${l.text}</span><time>${l.at}</time></li>`).join("") : `<li><span style="color:var(--muted)">ماكو أوامر بعد</span></li>`; }
 function esc(s){ return s.replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch])); }
 
 const SHEETS = {
@@ -399,10 +462,10 @@ const SHEETS = {
     ${getPin() ? `<button class="btn" data-act="unpin" type="button">افصل هذا الجهاز</button>` : ""}`,
   home: () => `
     <span class="eyebrow">أهلاً حارث</span>
-    <h2>هذا مكتبك</h2>
-    ${getPin() ? "" : `<button class="btn primary" data-open="pin" type="button">اربط بالبوت</button>`}
-    <p>اضغط على اللابتوب حتى تعطيه أمر، أو على الطابعة حتى تطبع. كل شي مأشر بنقطة صفرة.</p>
-    <ul class="picks">${Object.entries(HOT).map(([k,h])=>`<li><button type="button" class="pick" data-open="${k}"><b>${h.name}</b><span>${{laptop:"أوامر وتشغيل",printer:"طباعة",archive:"مجلد الأرشيف",lamp:"شغّل وطفّي",clock:"وقت كركوك",window:"الجو برة"}[k]}</span></button></li>`).join("")}</ul>`,
+    <h2>مكتب ${NAME}</h2>
+    ${LIVE && !getPin() ? `<button class="btn primary" data-open="pin" type="button">اربط بالبوت</button>` : ""}
+    <p>اضغط على اللابتوب حتى تعطيه أمر، أو على الطابعة حتى تطبع. كل شي مأشر بنقطة ذهبية.</p>
+    <ul class="picks">${Object.entries(HOT).map(([k,h])=>`<li><button type="button" class="pick" data-open="${k}"><b>${h.name}</b><span>${h.sub}</span></button></li>`).join("")}</ul>`,
   laptop: () => `
     <span class="eyebrow">اللابتوب</span>
     <h2>لابتوب المكتب</h2>
@@ -415,42 +478,38 @@ const SHEETS = {
       <button class="btn" data-act="lock" ${busy?"disabled":""}>اقفل الشاشة</button>
       <button class="btn" data-act="off" ${busy?"disabled":""}>طفّي</button>` : `<button class="btn primary" data-act="on">شغّل اللابتوب</button>`}
     </div>
-    <form class="ask" id="askf"><input id="ask" placeholder="اكتب أمر، مثلاً: اطبع كتاب الاعتذار" ${laptopOn&&!busy?"":"disabled"} aria-label="أمر للابتوب"><button class="btn" ${laptopOn&&!busy?"":"disabled"}>أرسل</button></form>`,
+    <form class="ask" id="askf"><input id="ask" placeholder="اكتب رسالة تطلع على الشاشة" ${laptopOn&&!busy?"":"disabled"} aria-label="رسالة للابتوب"><button class="btn" ${laptopOn&&!busy?"":"disabled"}>أرسل</button></form>`,
   printer: () => `
     <span class="eyebrow">الطابعة</span>
-    <h2>Epson المكتب</h2>
+    <h2>طابعة المكتب</h2>
     <div class="state ${busy?"busy":laptopOn?"":"off"}"><i></i>${busy?"دا تطبع…":laptopOn?"جاهزة":"اللابتوب مطفي، شغّله أول"}</div>
-    <p>بعد الربط: أي ملف تدزه للبوت وتضغط «اطبع» ينزل هنا وحده.</p>
+    <p>أي ملف تحطه بمجلد «للطباعة» على اللابتوب ينطبع وحده.</p>
     <div class="actions"><button class="btn primary" data-act="print" ${busy||!laptopOn?"disabled":""}>اطبع صفحة تجربة</button></div>`,
-  archive: () => `
-    <span class="eyebrow">الأرشيف</span>
-    <h2>أرشيف المناقصات</h2>
-    <p>مجلد الأرشيف الحقيقي بالدرايف. يفتح بصفحة جديدة.</p>
+  tv: () => `
+    <span class="eyebrow">الشاشة</span>
+    <h2>${hm(kirkukNow())} بتوقيت كركوك</h2>
+    <p>${today()}. نشرة المناقصات للمحافظات الخمس توصل على البوت كل صبح.</p>`,
+  logo: () => `
+    <span class="eyebrow">الشركة</span>
+    <h2>شركة ${NAME} ${SUB}</h2>
+    <dl class="facts"><dt>المدينة</dt><dd>كركوك</dd><dt>المدير المفوض</dt><dd>حسين حمود عبد</dd><dt>التصنيف</dt><dd>مقاولات، درجة خامسة</dd></dl>`,
+  projects: () => `
+    <span class="eyebrow">المشاريع</span>
+    <h2>أرشيف الشركة</h2>
+    <p>ملفات المناقصات والمشاريع بمجلد الأرشيف بالدرايف. ينفتح بصفحة جديدة.</p>
     <div class="actions"><a class="btn primary" href="${ARCHIVE}" target="_blank" rel="noopener">افتح الأرشيف</a></div>`,
-  lamp: () => `
-    <span class="eyebrow">المصباح</span>
-    <h2>مصباح المكتب</h2>
-    <div class="state ${lampOn?"":"off"}"><i></i>${lampOn?"شغّال":"مطفي"}</div>
-    <div class="actions"><button class="btn primary" data-act="lamp">${lampOn?"طفّي المصباح":"شغّل المصباح"}</button></div>`,
-  clock: () => { const t = kirkukNow(); return `
-    <span class="eyebrow">الساعة</span>
-    <h2>${hm(t)} بتوقيت كركوك</h2>
-    <p>الساعة اللي على الحايط تمشي على وقت كركوك الحقيقي.</p>`; },
-  window: () => { const t = kirkukNow(); const hr = t.h; return `
-    <span class="eyebrow">الشباك</span>
-    <h2>${hr>=6&&hr<17?"نهار":hr>=17&&hr<19?"غروب":"ليل"} بكركوك</h2>
-    <p>السما بالشباك وضوء الغرفة يتبدلون حسب الوقت هسه بكركوك، وبالخلف القلعة.</p>`; }
+  lights: () => `
+    <span class="eyebrow">الإضاءة</span>
+    <h2>إضاءة السقف</h2>
+    <div class="state ${lightsOn?"":"off"}"><i></i>${lightsOn?"شغّالة":"مطفية"}</div>
+    <div class="actions"><button class="btn primary" data-act="lights">${lightsOn?"طفّي الإضاءة":"شغّل الإضاءة"}</button></div>`
 };
 function renderSheet(){ $("sheet").innerHTML = SHEETS[current||"home"](); Object.values(HOT).forEach(h=>h.el.classList.toggle("on", h === HOT[current])); }
 function open(k){ current = k; renderSheet(); glide(k); }
 
-function setScreen(mode, text){ screenState = {mode, text:text||""}; redraw(screenTex); screenGlow.intensity = mode === "off" ? 0 : .35; }
-function runPrint(label){
-  busy = true; renderSheet(); setScreen("busy","جاري الطباعة…"); ledM.color.set(0x7fb2e5); addLog(label);
-  printAnim = {t0:performance.now()+700, dur:reduced?10:2200};
-  paper.visible = false;
-}
-function finishPrint(){ busy = false; setScreen("done","انطبعت ✓"); ledM.color.set(0x62c48d); addLog("انطبعت بالمكتب الافتراضي"); renderSheet(); setTimeout(()=>{ if (!busy && laptopOn) setScreen("home"); }, 2500); }
+function setScreen(mode, text){ screenState = {mode, text:text||""}; redraw(screenTex); }
+function runPrint(label){ busy = true; renderSheet(); setScreen("busy","جاري الطباعة…"); ledM.color.set(0x2c6fae); addLog(label); printAnim = {t0:performance.now()+700, dur:reduced?10:2200}; paper.visible = false; }
+function finishPrint(){ busy = false; setScreen("done","انطبعت ✓"); ledM.color.set(0x2fbf71); addLog("انطبعت بالمكتب الافتراضي"); renderSheet(); setTimeout(()=>{ if (!busy && laptopOn) setScreen("home"); }, 2500); }
 
 $("sheet").addEventListener("click", e => {
   const o = e.target.closest("[data-open]"); if (o) { open(o.dataset.open); return; }
@@ -458,22 +517,22 @@ $("sheet").addEventListener("click", e => {
   const act = a.dataset.act;
   if (act === "unpin") { setPin(""); addLog("انفصل هذا الجهاز"); current = null; renderSheet(); return; }
   if (act === "print") { runPrint("اطبع صفحة تجربة"); send("print", "اطبع صفحة تجربة"); }
-  if (act === "sleep" || act === "lock") { const lbl = act === "sleep" ? "نوّم اللابتوب" : "اقفل الشاشة"; addLog(lbl); send(act, lbl); return; }
-  if (act === "lamp") { lampOn = !lampOn; lampLight.visible = lampOn; bulb.material.color.set(lampOn?0xffe2a8:0x6b6155); addLog(lampOn?"شغّل المصباح":"طفّي المصباح"); renderSheet(); }
+  if (act === "sleep" || act === "lock") { const lbl = act === "sleep" ? "نوّم اللابتوب" : "اقفل الشاشة"; addLog(lbl); send(act, lbl); }
+  if (act === "lights") { setLights(!lightsOn); addLog(lightsOn ? "شغّل الإضاءة" : "طفّي الإضاءة"); renderSheet(); }
   if (act === "off") { busy = true; renderSheet(); setScreen("busy","دا يطفي…"); addLog("طفّي اللابتوب"); send("shutdown", "طفّي اللابتوب");
     setTimeout(()=>{ busy = false; laptopOn = false; setScreen("off"); ledM.color.set(0x333333); renderSheet(); }, reduced?10:1600); }
-  if (act === "on") { laptopOn = true; setScreen("home"); ledM.color.set(0x62c48d); addLog("شغّل اللابتوب"); send("wake", "شغّل اللابتوب"); renderSheet(); }
+  if (act === "on") { laptopOn = true; setScreen("home"); ledM.color.set(0x2fbf71); addLog("شغّل اللابتوب"); send("wake", "شغّل اللابتوب"); renderSheet(); }
   if (act === "restart") { busy = true; renderSheet(); setScreen("busy","إعادة تشغيل…"); addLog("إعادة تشغيل"); send("restart", "إعادة تشغيل");
-    setTimeout(()=>{ setScreen("off"); }, reduced?5:1200); setTimeout(()=>{ busy = false; setScreen("home"); renderSheet(); }, reduced?10:2600); }
+    setTimeout(()=>setScreen("off"), reduced?5:1200); setTimeout(()=>{ busy = false; setScreen("home"); renderSheet(); }, reduced?10:2600); }
 });
 $("sheet").addEventListener("submit", e => {
-  if (e.target.id === "pinf") { e.preventDefault(); const v = $("pin").value.trim(); if (!v) return; setPin(v); addLog("انحفظ الرمز"); current = afterPin && afterPin !== "pin" ? afterPin : null; afterPin = null; renderSheet(); return; }
-  if (e.target.id !== "askf") return; e.preventDefault();
+  e.preventDefault();
+  if (e.target.id === "pinf") { const v = $("pin").value.trim(); if (!v) return; setPin(v); addLog("انحفظ الرمز"); current = afterPin && afterPin !== "pin" ? afterPin : null; afterPin = null; renderSheet(); checkReal(); return; }
+  if (e.target.id !== "askf") return;
   const v = $("ask").value.trim(); if (!v) return;
   send("text", v.slice(0,300));
-  if (/اطبع|طباع/.test(v)) { runPrint(esc(v)); return; }
-  busy = true; renderSheet(); setScreen("busy","دا ينفّذ…"); addLog(esc(v));
-  setTimeout(()=>{ busy = false; setScreen("done","استلمت الأمر ✓"); addLog("انستلم"); renderSheet(); setTimeout(()=>{ if (!busy && laptopOn) setScreen("home"); }, 2500); }, reduced?10:1800);
+  busy = true; renderSheet(); setScreen("busy","دا يرسل…"); addLog(esc(v));
+  setTimeout(()=>{ busy = false; setScreen("done","وصلت الرسالة ✓"); renderSheet(); setTimeout(()=>{ if (!busy && laptopOn) setScreen("home"); }, 2500); }, reduced?10:1500);
 });
 
 // ---------- loop ----------
@@ -485,20 +544,20 @@ function tick(now){
   if (tween) { const k = Math.min(1,(now-tween.t0)/tween.dur), e = k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
     camera.position.lerpVectors(tween.fp,tween.tp,e); controls.target.lerpVectors(tween.ft,tween.tt,e); if (k>=1) tween = null; }
   if (printAnim) { const k = (now-printAnim.t0)/printAnim.dur;
-    if (k >= 0) { paper.visible = true; const e = Math.min(1,k); paper.position.set(0,.06+.0*e,.02+.27*e); paper.rotation.x = -.06*e; }
+    if (k >= 0) { paper.visible = true; const e = Math.min(1,k); paper.position.set(0,.08,.03+.27*e); paper.rotation.x = -.05*e; }
     if (k >= 1) { printAnim = null; finishPrint(); } }
   if (screenState.mode === "busy") redraw(screenTex);
   const t = kirkukNow();
-  if (t.s !== lastSec) { lastSec = t.s; redraw(clockTex); $("hdr-clock").textContent = "كركوك " + hm(t);
-    if (t.m !== lastMin) { lastMin = t.m; applyDaylight(); if (screenState.mode === "home") redraw(screenTex); } }
+  if (t.s !== lastSec) { lastSec = t.s; $("hdr-clock").textContent = "كركوك " + hm(t);
+    if (t.m !== lastMin) { lastMin = t.m; redraw(tvTex); if (screenState.mode === "home") redraw(screenTex); } }
   controls.update();
   renderer.render(scene,camera);
   const r = canvas.getBoundingClientRect();
-  Object.values(HOT).forEach(h=>{ v3.copy(h.at).project(camera); const vis = v3.z < 1 && Math.abs(v3.x) < 1.05 && Math.abs(v3.y) < 1.05;
+  Object.values(HOT).forEach(h=>{ v3.copy(h.at).project(camera); const vis = v3.z < 1 && Math.abs(v3.x) < 1.02 && Math.abs(v3.y) < 1.02;
     h.el.hidden = !vis; if (vis) h.el.style.transform = `translate(${(v3.x*.5+.5)*r.width}px,${(-v3.y*.5+.5)*r.height}px) translate(-50%,-50%)`; });
   requestAnimationFrame(tick);
 }
-fontsReady.then(()=>{ redraw(screenTex); redraw(plaqueTex); });
+fontsReady.then(()=>{ redraw(screenTex); redraw(tvTex); });
 renderMode(); renderSheet(); renderLog(); checkReal(); setInterval(checkReal, 30000);
 requestAnimationFrame(tick);
 })();
