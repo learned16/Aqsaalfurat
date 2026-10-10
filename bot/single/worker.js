@@ -33,6 +33,11 @@
  *   GET  /pc/result  ?id=        → النتيجة أو {pending:true}
  *   اللابتوب: POST /pc/result {id, ok, data|error}، GET /pc/args?id= (للملفات الكبيرة)
  *
+ * مكتبة الأوامر (كلها ثابتة بالبرنامج، ماكو أمر يشغّل كود عشوائي):
+ *   🟢 تتنفذ فوراً: roots ls find get put mkdir copy pdf print tender check docs status printers zip log
+ *   🟡 تحتاج موافقة صاحب البوت: install default_printer clear_queue close_word screenshot wake_time
+ *      توصله رسالة بالأمر ومدخلاته ويه ✅ نفّذ / ❌ ارفض (pcok:/pcno:، يمسكها الوسيط). الموافقة خلال ساعة.
+ *
  * زر «🖨️ اطبع» تحت رسالة اللابتوب (لمّا /office/done بيه print = مسار ملف):
  *   تلغرام يرسل الضغطة (callback pcpr:<tk>) لنفس الوسيط، فنمسكها هنا ونحط أمر طباعة بالطابور.
  *
@@ -52,9 +57,20 @@ const OFFICE_CMDS = {
 };
 
 // أوامر يكدر البوت يدزها للابتوب
-const PUSH_CMDS = ['print', 'shutdown', 'restart', 'sleep', 'lock', 'text', 'printfile', 'tender', 'docs'];
+const PUSH_CMDS = ['print', 'shutdown', 'restart', 'sleep', 'lock', 'text', 'printfile', 'tender', 'docs', 'status'];
 const FILE_CMDS = ['printfile', 'tender'];
-const PC_OPS = ['roots', 'ls', 'find', 'get', 'put', 'mkdir', 'copy', 'pdf', 'print', 'tender', 'check', 'docs'];
+const PC_OPS = ['roots', 'ls', 'find', 'get', 'put', 'mkdir', 'copy', 'pdf', 'print', 'tender', 'check', 'docs',
+  'status', 'printers', 'zip', 'log'];
+// الأوامر الحساسة: وصفها يطلع لصاحب البوت قبل الموافقة
+const APPROVE_OPS = {
+  install: 'تنصيب برنامج من القائمة المسموحة',
+  default_printer: 'تغيير الطابعة الافتراضية',
+  clear_queue: 'إلغاء أوراق عالقة بطابور الطباعة',
+  close_word: 'سد Word (إذا علگ) — أي ملف مو محفوظ يروح',
+  screenshot: 'صورة لشاشة اللابتوب',
+  wake_time: 'تغيير وقت تصحية اللابتوب اليومي'
+};
+const APPROVAL_TTL = 3600;
 const DAY = 24 * 3600;
 const FILE_TTL = 3 * 24 * 3600; // ملف الطباعة ينمسح من KV وحده بعد 3 أيام إذا ما انسحب
 
@@ -84,6 +100,11 @@ export default {
     // ضغطة زر «اطبع» تحت رسالة اللابتوب: نعالجها هنا، ما تروح لـ Apps Script
     if (body.indexOf('"pcpr:') >= 0) {
       const handled = await printButton(env, body);
+      if (handled) return new Response('ok', { status: 200 });
+    }
+    // موافقة صاحب البوت على أمر حساس
+    if (body.indexOf('"pcok:') >= 0 || body.indexOf('"pcno:') >= 0) {
+      const handled = await approvalButton(env, body);
       if (handled) return new Response('ok', { status: 200 });
     }
     const target = env.GAS_URL + (env.GAS_URL.includes('?') ? '&' : '?') + 'tg=' + encodeURIComponent(env.TG_SECRET);
@@ -168,6 +189,41 @@ async function printButton(env, body) {
   }
   await enqueue(env, { cmd: 'printpath', path: rec.path, chat: who });
   await tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, text: '🖨️ انرسل للطابعة' });
+  return true;
+}
+
+/** ✅ أو ❌ على أمر حساس. صاحب البوت بس. */
+async function approvalButton(env, body) {
+  let u;
+  try { u = JSON.parse(body); } catch (e) { return false; }
+  const cb = u.callback_query;
+  if (!cb || typeof cb.data !== 'string' || !/^pc(ok|no):p[a-z0-9]+$/.test(cb.data)) return false;
+  const ok = cb.data.indexOf('pcok:') === 0;
+  const id = cb.data.slice(5);
+  if (String(cb.from && cb.from.id) !== String(env.OWNER_ID)) {
+    await tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, text: 'الموافقة لصاحب البوت بس' });
+    return true;
+  }
+  const raw = env.OFFICE_KV ? await env.OFFICE_KV.get('ap:' + id) : null;
+  const msg = cb.message || {};
+  if (!raw) {
+    await tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, text: 'الطلب انتهى أو انعالج' });
+    return true;
+  }
+  // نشيل المعلّق حتى ما يتنفذ مرتين
+  await env.OFFICE_KV.put('ap:' + id, '', { expirationTtl: 60 });
+  if (ok) {
+    const q = JSON.parse((await env.OFFICE_KV.get('queue')) || '[]');
+    q.push(JSON.parse(raw));
+    await env.OFFICE_KV.put('queue', JSON.stringify(q.slice(-20)));
+  } else {
+    await env.OFFICE_KV.put('pr:' + id, JSON.stringify({ id, ok: false, error: 'صاحب البوت رفض الأمر' }), { expirationTtl: DAY });
+  }
+  await tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, text: ok ? '✅ انرسل للابتوب' : '❌ انرفض' });
+  if (msg.chat && msg.message_id) {
+    await tg(env, 'editMessageText', { chat_id: msg.chat.id, message_id: msg.message_id,
+      text: String(msg.text || '').slice(0, 3500) + (ok ? '\n\n✅ وافقت' : '\n\n❌ رفضت') });
+  }
   return true;
 }
 
@@ -257,11 +313,22 @@ async function pcRoute(request, env, url) {
     if (!pcOk(request, env)) return new Response('forbidden', { status: 403 });
     let data;
     try { data = await request.json(); } catch (e) { return json({ ok: false, error: 'bad json' }, 400); }
-    if (!data || PC_OPS.indexOf(data.op) < 0) return json({ ok: false, error: 'unknown op' }, 400);
+    if (!data || (PC_OPS.indexOf(data.op) < 0 && !APPROVE_OPS[data.op])) return json({ ok: false, error: 'unknown op' }, 400);
     const cmd = { cmd: 'pc', op: data.op };
     const args = data.args || {};
     const raw = JSON.stringify(args);
     cmd.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    if (APPROVE_OPS[data.op]) {
+      if (raw.length > 2000) return json({ ok: false, error: 'args too long' }, 400);
+      cmd.args = args;
+      await env.OFFICE_KV.put('ap:' + cmd.id, JSON.stringify(cmd), { expirationTtl: APPROVAL_TTL });
+      const lines = Object.keys(args).map(k => '• ' + k + ': ' + String(args[k]).slice(0, 300));
+      await tellOwner(env, '🟡 Claude يطلب أمر على اللابتوب:\n' + APPROVE_OPS[data.op] + ' (' + data.op + ')' +
+        (lines.length ? '\n' + lines.join('\n') : '') + '\n\nما يتنفذ إلا توافق (خلال ساعة).',
+        { inline_keyboard: [[{ text: '✅ نفّذ', callback_data: 'pcok:' + cmd.id }, { text: '❌ ارفض', callback_data: 'pcno:' + cmd.id }]] });
+      return json({ ok: true, id: cmd.id, awaiting_approval: true, now: Date.now(),
+        seen: Number((await env.OFFICE_KV.get('seen')) || 0) });
+    }
     // الملفات الكبيرة ما تنحط بالطابور: تنحفظ لحالها واللابتوب يسحبها
     if (raw.length > 20000) {
       await env.OFFICE_KV.put('pa:' + cmd.id, raw, { expirationTtl: DAY });

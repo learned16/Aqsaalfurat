@@ -3,8 +3,10 @@
 # يسأل وسيط Cloudflare كل 5 ثواني عن الأوامر وينفّذها:
 #   - أوامر المكتب (من البوت أو المكتب الافتراضي): طباعة، رسالة، قفل، نوم، إعادة تشغيل، طفي
 #   - مصنع المناقصات: طلب مناقصة (xlsx) ينبني حزمة كاملة وينحفظ بالأرشيف بالدرايف
-#   - «إيد Claude»: أوامر ثابتة ومحدودة من جلسة Claude (تصفح، سحب ملف، حط ملف، PDF، طباعة، المصنع)
-#     داخل المجلدات المسموحة بس. ماكو تشغيل أوامر أو برامج عشوائية.
+#   - «إيد Claude»: مكتبة أوامر ثابتة من جلسة Claude، داخل المجلدات المسموحة بس، وماكو تشغيل كود عشوائي:
+#       🟢 فوراً: تصفح، سحب ملف، حط ملف، PDF، طباعة، المصنع، حالة اللابتوب، الطابعات، zip، السجل
+#       🟡 بموافقة صاحب البوت بتلغرام (الوسيط يمسكها لحد ما يوافق): تنصيب برنامج من قائمة ثابتة،
+#          الطابعة الافتراضية، إلغاء طابور الطباعة، سد Word، صورة الشاشة، وقت التصحية
 # ويراقب مجلدين: «للطباعة» (أي ملف ينطبع) و«مصنع المناقصات\طلبات» (أي طلب ينبني).
 # ما يحذف أي ملف: المطبوع ينتقل لـ«انطبع»، والطلب لـ«تم» أو «فشل»، وأي ملف يتبدل تنحفظ نسخته القديمة.
 # الإعدادات بـ %APPDATA%\AqsaOffice\config.json (يسويها install.ps1).
@@ -32,6 +34,17 @@ $allow = @()
 foreach ($a in @($cfg.allow) + @($printDir, $dataDir)) { if ($a) { $allow += [IO.Path]::GetFullPath($a).TrimEnd('\') + '\' } }
 # الطباعة والتحويل لهاي الأنواع بس (مستندات، مو برامج)
 $docExt = @('.pdf', '.doc', '.docx', '.rtf', '.txt', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff')
+# البرامج اللي يكدر Claude ينصّبها (بموافقة): الاسم ← معرّف winget
+$installable = @{
+  'sumatra'     = 'SumatraPDF.SumatraPDF'
+  'libreoffice' = 'TheDocumentFoundation.LibreOffice'
+  'python'      = 'Python.Python.3.12'
+  'gdrive'      = 'Google.GoogleDrive'
+  '7zip'        = '7zip.7zip'
+  'chrome'      = 'Google.Chrome'
+  'acrobat'     = 'Adobe.Acrobat.Reader.64-bit'
+}
+$started = Get-Date
 $utf8 = New-Object Text.UTF8Encoding $false
 [Console]::OutputEncoding = $utf8
 
@@ -284,8 +297,124 @@ function Pc-Op($c) {
     }
     'check' { return Run-Factory @('check', (Allowed-Path $a.path)) }
     'docs'  { return Run-Factory @('docs', '--days', "$($a.days)") }
+    # ------------------------------------------------ 🟢 مكتبة: معلومات
+    'status'   { return (Laptop-Status) }
+    'printers' { return @{ printers = @(Printer-List) } }
+    'log' {
+      $n = [int]$a.lines
+      if ($n -le 0 -or $n -gt 500) { $n = 80 }
+      return @{ lines = @(Get-Content -LiteralPath $logFile -Tail $n -Encoding UTF8 -ErrorAction SilentlyContinue) }
+    }
+    'zip' {
+      $src = Allowed-Path $a.path
+      $dst = $a.out
+      if (-not $dst) { $dst = $src.TrimEnd('\') + '.zip' }
+      $dst = Allowed-Path $dst
+      if ([IO.Path]::GetExtension($dst).ToLower() -ne '.zip') { throw 'الناتج لازم .zip' }
+      $old = Backup-Existing $dst
+      Compress-Archive -LiteralPath $src -DestinationPath $dst -CompressionLevel Optimal -Force  # القديم انحفظ فوك
+      return @{ path = $dst; size = (Get-Item -LiteralPath $dst).Length; backup = $old }
+    }
+    # ------------------------------------- 🟡 مكتبة: توصل هنا بس بعد موافقة صاحب البوت
+    'install' {
+      $name = "$($a.name)".ToLower()
+      if (-not $installable.ContainsKey($name)) { throw ('مو بالقائمة المسموحة. المسموح: ' + (($installable.Keys | Sort-Object) -join ', ')) }
+      if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw 'winget مو موجود على اللابتوب' }
+      $out = & winget install -e --id $installable[$name] --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-String
+      $tail = ($out.Trim() -split "`n" | Select-Object -Last 3) -join "`n"
+      Report ("📦 تنصيب $name`n" + $tail)
+      return @{ name = $name; output = $out.Substring([Math]::Max(0, $out.Length - 3000)) }
+    }
+    'default_printer' {
+      $p = Get-CimInstance Win32_Printer | Where-Object { $_.Name -eq "$($a.name)" } | Select-Object -First 1
+      if (-not $p) { throw ('ماكو طابعة بهذا الاسم. الموجود: ' + ((Printer-List | ForEach-Object { $_.name }) -join ' | ')) }
+      Invoke-CimMethod -InputObject $p -MethodName SetDefaultPrinter | Out-Null
+      Report "🖨️ صارت الطابعة الافتراضية: $($p.Name)"
+      return @{ default = $p.Name }
+    }
+    'clear_queue' {
+      $n = 0
+      Get-Printer -ErrorAction SilentlyContinue | ForEach-Object {
+        Get-PrintJob -PrinterObject $_ -ErrorAction SilentlyContinue | ForEach-Object { Remove-PrintJob -InputObject $_ -ErrorAction SilentlyContinue; $n++ }
+      }
+      Report "🧹 انلغت $n ورقة عالقة بطابور الطباعة"
+      return @{ removed = $n }
+    }
+    'close_word' {
+      $procs = @(Get-Process -Name WINWORD -ErrorAction SilentlyContinue)
+      $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+      Report "📝 انسد Word ($($procs.Count))"
+      return @{ closed = $procs.Count }
+    }
+    'screenshot' {
+      Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+      $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+      $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+      $g = [System.Drawing.Graphics]::FromImage($bmp)
+      $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+      # نصغّرها حتى تكون خفيفة
+      $w = [Math]::Min(1280, $b.Width)
+      $h = [int]($b.Height * $w / $b.Width)
+      $small = New-Object System.Drawing.Bitmap $bmp, $w, $h
+      $ms = New-Object IO.MemoryStream
+      $small.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+      $g.Dispose(); $bmp.Dispose(); $small.Dispose()
+      Report '📸 انأخذت صورة للشاشة لـ Claude'
+      return @{ name = 'screen.png'; b64 = [Convert]::ToBase64String($ms.ToArray()) }
+    }
+    'wake_time' {
+      $t = "$($a.time)"
+      if ($t -notmatch '^([01]\d|2[0-3]):[0-5]\d$') { throw 'الوقت لازم HH:mm مثل 07:45' }
+      $wa = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c exit'
+      $wt = New-ScheduledTaskTrigger -Daily -At $t
+      $ws = New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+      Register-ScheduledTask -TaskName 'AqsaOfficeWake' -Action $wa -Trigger $wt -Settings $ws -Force | Out-Null
+      Report "⏰ صار وقت التصحية اليومي $t"
+      return @{ wake = $t }
+    }
     default { throw "أمر غير معروف: $($c.op)" }
   }
+}
+
+function Printer-List {
+  $def = (Get-CimInstance Win32_Printer -Filter 'Default=True' -ErrorAction SilentlyContinue | Select-Object -First 1).Name
+  Get-Printer -ErrorAction SilentlyContinue | ForEach-Object {
+    $jobs = @(Get-PrintJob -PrinterObject $_ -ErrorAction SilentlyContinue).Count
+    @{ name = $_.Name; default = ($_.Name -eq $def); status = "$($_.PrinterStatus)"; jobs = $jobs }
+  }
+}
+
+function Laptop-Status {
+  $os = Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue
+  $disks = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null } | ForEach-Object {
+    @{ drive = $_.Name; freeGB = [Math]::Round($_.Free / 1GB, 1) }
+  }
+  $bat = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
+  $def = (Get-CimInstance Win32_Printer -Filter 'Default=True' -ErrorAction SilentlyContinue | Select-Object -First 1).Name
+  $wordOk = [bool](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Winword.exe' -ErrorAction SilentlyContinue)
+  $waiting = 0
+  if ($jobsDir) { $waiting = @(Get-ChildItem -Path $jobsDir -File -ErrorAction SilentlyContinue).Count }
+  return @{
+    computer = $env:COMPUTERNAME; user = $env:USERNAME
+    windows = "$($os.Caption)"; upSince = $(if ($os) { $os.LastBootUpTime.ToString('yyyy-MM-dd HH:mm') } else { '' })
+    agentSince = $started.ToString('yyyy-MM-dd HH:mm')
+    disks = @($disks)
+    battery = $(if ($bat) { "$($bat.EstimatedChargeRemaining)%" } else { 'ماكو (كهرباء)' })
+    defaultPrinter = $def; word = $wordOk; python = [bool]$python
+    googleDrive = [bool](Get-Process -Name GoogleDriveFS -ErrorAction SilentlyContinue)
+    printFolderWaiting = @(Get-ChildItem -Path $printDir -File -ErrorAction SilentlyContinue).Count
+    tenderJobsWaiting = $waiting
+  }
+}
+
+function Status-Text {
+  $s = Laptop-Status
+  $d = ($s.disks | ForEach-Object { "$($_.drive): $($_.freeGB) GB" }) -join '، '
+  $t = "💻 حالة اللابتوب ($($s.computer))`n• شغّال من: $($s.upSince)`n• البطارية: $($s.battery)`n• المساحة الفارغة: $d"
+  $t += "`n• الطابعة الافتراضية: $($s.defaultPrinter)"
+  $t += "`n• Word: " + $(if ($s.word) { '✓' } else { '✗' }) + '  • Python (المصنع): ' + $(if ($s.python) { '✓' } else { '✗' }) + '  • Google Drive: ' + $(if ($s.googleDrive) { '✓ شغّال' } else { '✗ مطفي' })
+  if ($s.printFolderWaiting) { $t += "`n• ملفات تنتظر الطباعة: $($s.printFolderWaiting)" }
+  return $t
 }
 
 function Run-Pc($c) {
@@ -327,6 +456,7 @@ function Run-Command($c) {
       if (-not $list.Count) { Report '✅ ماكو مستمسك ينتهي خلال 45 يوم (حسب مستمسكات.xlsx)' $to }
       else { Report ("⏰ تنتهي قريباً:`n" + (($list | ForEach-Object { "• $($_.name) ($($_.company)): $($_.expiry) — باقي $($_.days) يوم" }) -join "`n")) $to }
     }
+    'status'   { Report (Status-Text) $to }
     'print'    { Print-TestPage; Report '🖨️ انطبعت صفحة التجربة' $to }
     'shutdown' { Report '⏻ اللابتوب ينطفي بعد دقيقة' $to; shutdown.exe /s /t 60 /c 'أمر من مكتب أقصى الفرات' }
     'restart'  { Report '🔄 اللابتوب يعيد التشغيل بعد دقيقة' $to; shutdown.exe /r /t 60 /c 'أمر من مكتب أقصى الفرات' }

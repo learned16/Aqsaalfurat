@@ -55,5 +55,5 @@ JSON للمزامنة: `{brief:{date,body}, tenders:[{key,title,entity,number,go
 - `bot/laptop/`: agent.ps1 (البرنامج)، install.ps1، و`factory/` (مصنع المناقصات بـ Python). ما منصّب بعد على لابتوب الشركة.
 - المصنع: `factory.py build طلب.xlsx` يبني الحزمة فوك كتاب سابق للشركة (`نموذج_الكتاب` بالشركات.json)، بصياغات متنوعة (wording.py)، ويرقّم من `الرقم_التالي`، ويحفظ بالأرشيف. بياناته بمجلد «مصنع المناقصات» بالدرايف. **الرقم الصادر صار مصدره الشركات.json** (يبدي 232).
 - جهة جديدة: سوّي وصفتها `الجهات/<الجهة>.json` (انسخ عام.json) وحطها بـ `bridge.py pc put`. القسم الرابع الخاص بالجهة يتعبّى ويدخل بحقل «ملف القسم الرابع».
-- إيد Claude: `python3 bridge.py pc roots|ls|find|get|put|mkdir|copy|pdf|print|tender|check|docs` (يحتاج `PC_KEY` بالبيئة وبالوسيط). أوامر ثابتة بالمجلدات المسموحة بس، ماكو تشغيل أوامر.
+- إيد Claude (مكتبة أوامر): 🟢 `python3 bridge.py pc roots|ls|find|get|put|mkdir|copy|pdf|print|tender|check|docs|status|printers|log|zip`، و🟡 `install|default_printer|clear_queue|close_word|screenshot|wake_time` توصل لصاحب البوت بتلغرام وما تتنفذ إلا يوافق. يحتاج `PC_KEY` بالبيئة وبالوسيط. ماكو تشغيل أوامر عشوائية (نظام الحماية رفضه، لا تحاول تبنيه)؛ أي شغلة جديدة تنضاف أمر ثابت بالمكتبة.
 - البوت: 🖥️ المكتب للمدير (📦 مناقصة جديدة، 📄 نموذج الطلب، اطبع ملف، ⏰ المستمسكات، أوامر اللابتوب). الوسيط يمسك زر «🖨️ اطبع الحزمة» (pcpr:) بنفسه.

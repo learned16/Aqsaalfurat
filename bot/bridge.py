@@ -26,6 +26,11 @@
   bridge.py pc mkdir <مسار> | copy <من> <إلى> | pdf <docx> [pdf] | print <مسار>
   bridge.py pc tender <طلب.xlsx|json> [--dry]  يبني مناقصة بالمصنع (ملف محلي أو مسار باللابتوب)
   bridge.py pc check <مسار_طلب> | docs [أيام]
+  bridge.py pc status | printers | log [سطور] | zip <مجلد> [ملف.zip]
+مكتبة الأوامر الحساسة (توصل لصاحب البوت بتلغرام وما تتنفذ إلا يوافق خلال ساعة):
+  bridge.py pc install <sumatra|libreoffice|python|gdrive|7zip|chrome|acrobat>
+  bridge.py pc default_printer "<اسم الطابعة>" | clear_queue | close_word | wake_time 07:45
+  bridge.py pc screenshot [ملف.png]
 اللابتوب يسأل كل 5 ثواني، فالنتيجة توصل خلال ثواني إذا شغّال.
 """
 import base64
@@ -91,6 +96,9 @@ def pc_call(op, args, wait=600):
         sent = json.loads(res.read().decode("utf-8"))
     if not sent.get("ok"):
         sys.exit("الوسيط رفض: " + str(sent.get("error")))
+    if sent.get("awaiting_approval"):
+        print("🟡 الأمر يحتاج موافقة صاحب البوت بتلغرام؛ أنتظر (لحد ساعة)…", file=sys.stderr)
+        wait = max(wait, 3700)
     if sent.get("now", 0) - sent.get("seen", 0) > 6 * 60 * 1000:
         print("⚠️ اللابتوب ما سأل من أكثر من 6 دقايق (مطفي أو نايم)؛ الأمر ينتظر بالطابور.", file=sys.stderr)
     deadline = time.time() + wait
@@ -122,6 +130,12 @@ def pc_main(args):
         with open(rest[0], "rb") as fh:
             b64 = base64.b64encode(fh.read()).decode("ascii")
         return pc_call("put", {"path": rest[1], "b64": b64})
+    if op == "screenshot":
+        data = pc_call("screenshot", {})
+        out = rest[0] if rest else "screen.png"
+        with open(out, "wb") as fh:
+            fh.write(base64.b64decode(data["b64"]))
+        return {"saved": out}
     if op == "tender":
         dry = flag(rest, "--dry")
         src = rest[0]
@@ -137,6 +151,11 @@ def pc_main(args):
         "pdf": lambda: {"path": rest[0], "out": rest[1] if len(rest) > 1 else ""},
         "print": lambda: {"path": rest[0]}, "check": lambda: {"path": rest[0]},
         "docs": lambda: {"days": rest[0] if rest else "30"},
+        "status": lambda: {}, "printers": lambda: {}, "clear_queue": lambda: {}, "close_word": lambda: {},
+        "log": lambda: {"lines": rest[0] if rest else "80"},
+        "zip": lambda: {"path": rest[0], "out": rest[1] if len(rest) > 1 else ""},
+        "install": lambda: {"name": rest[0]}, "default_printer": lambda: {"name": rest[0]},
+        "wake_time": lambda: {"time": rest[0]},
     }
     if op not in simple:
         sys.exit("أمر pc غير معروف: " + op)

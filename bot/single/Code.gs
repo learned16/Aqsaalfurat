@@ -1421,7 +1421,8 @@ function showOffice_(user) {
   if (!isManager_(user.id)) return showMenu_(user.chatId, '⛔ المكتب للمدير بس.');
   const st = workerCall_('/office/status');
   const kb = [[btn_('📦 مناقصة جديدة', 'off:tender'), btn_('📄 نموذج الطلب', 'off:form')],
-    [btn_('📄 اطبع ملف', 'off:file'), btn_('⏰ المستمسكات', 'off:docs')]]
+    [btn_('📄 اطبع ملف', 'off:file'), btn_('⏰ المستمسكات', 'off:docs')],
+    [btn_('💻 حالة اللابتوب', 'off:status')]]
     .concat(rows_(Object.keys(OFFICE_BUTTONS).map(function (k) { return btn_(OFFICE_BUTTONS[k], 'off:' + k); }), 2));
   kb.push([btn_('🔄 تحديث', 'menu:office'), btn_('🏠 القائمة', 'off:home')]);
   send_(user.chatId, '🖥️ <b>المكتب</b>\n' + laptopLine_(st) +
@@ -1444,6 +1445,7 @@ function handleOfficeButton_(user, action) {
   }
   if (action === 'form') return sendJobForm_(user);
   if (action === 'docs') return pushOffice_(user, { cmd: 'docs' }, '⏰ فحص المستمسكات');
+  if (action === 'status') return pushOffice_(user, { cmd: 'status' }, '💻 حالة اللابتوب');
   if (action === 'text') {
     setState_(user.chatId, { flow: 'screen', step: 0, data: {}, files: [] });
     return send_(user.chatId, '✍️ اكتب الرسالة اللي تطلع على شاشة اللابتوب:', [[btn_('❌ إلغاء', 'off:home')]]);
