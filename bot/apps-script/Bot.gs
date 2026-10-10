@@ -359,7 +359,7 @@ function handleInput_(user, state, msg) {
   const step = stepName_(state);
   const text = (msg.text || '').trim();
   if (state.flow === 'reject') return finishReject_(user, state, text);
-  if (state.flow === 'print' || state.flow === 'screen') return handleOfficeInput_(user, state, msg);
+  if (state.flow === 'print' || state.flow === 'screen' || state.flow === 'tender') return handleOfficeInput_(user, state, msg);
 
   const fileRef = msg.document ? { id: msg.document.file_id, name: msg.document.file_name } :
     msg.photo ? { id: msg.photo[msg.photo.length - 1].file_id, name: 'صورة_' + Date.now() + '.jpg' } : null;

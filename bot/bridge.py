@@ -16,6 +16,17 @@
   bridge.py tenders-list
 
 الملفات ترتفع من هنا مباشرة كـ base64، فما تمر على المحادثة.
+
+«إيد Claude» على لابتوب الشركة (عبر وسيط Cloudflare، تحتاج PC_KEY بالبيئة، وOFFICE_URL اختياري):
+  bridge.py pc roots                          المجلدات المسموحة ومجلد المصنع
+  bridge.py pc ls <مسار>                       محتويات مجلد
+  bridge.py pc find <مسار> <نمط>               بحث (مثل *.docx)
+  bridge.py pc get <مسار> [ملف_محلي]           يسحب ملف للجلسة
+  bridge.py pc put <ملف_محلي> <مسار>           يحط ملف (النسخة القديمة تنحفظ بـ _نسخ_قبل_التعديل)
+  bridge.py pc mkdir <مسار> | copy <من> <إلى> | pdf <docx> [pdf] | print <مسار>
+  bridge.py pc tender <طلب.xlsx|json> [--dry]  يبني مناقصة بالمصنع (ملف محلي أو مسار باللابتوب)
+  bridge.py pc check <مسار_طلب> | docs [أيام]
+اللابتوب يسأل كل 5 ثواني، فالنتيجة توصل خلال ثواني إذا شغّال.
 """
 import base64
 import json
@@ -63,6 +74,73 @@ def call(payload):
     if not body.get("ok"):
         sys.exit("خطأ من البوت: " + str(body.get("error")))
     return body
+
+
+OFFICE_URL = "https://aqsa-bot.companyaqsaalfurat.workers.dev"
+
+
+def pc_call(op, args, wait=600):
+    base = os.environ.get("OFFICE_URL", OFFICE_URL).rstrip("/")
+    key = os.environ.get("PC_KEY")
+    if not key:
+        sys.exit("PC_KEY لازم يكون بالبيئة (نفس PC_KEY بإعدادات الوسيط)")
+    hdr = {"Content-Type": "application/json", "X-PC-Key": key, "User-Agent": "aqsa-bridge"}
+    req = urllib.request.Request(base + "/pc/cmd", data=json.dumps({"op": op, "args": args}).encode("utf-8"),
+                                 headers=hdr, method="POST")
+    with urllib.request.urlopen(req, timeout=120) as res:
+        sent = json.loads(res.read().decode("utf-8"))
+    if not sent.get("ok"):
+        sys.exit("الوسيط رفض: " + str(sent.get("error")))
+    if sent.get("now", 0) - sent.get("seen", 0) > 6 * 60 * 1000:
+        print("⚠️ اللابتوب ما سأل من أكثر من 6 دقايق (مطفي أو نايم)؛ الأمر ينتظر بالطابور.", file=sys.stderr)
+    deadline = time.time() + wait
+    while time.time() < deadline:
+        time.sleep(3)
+        r = urllib.request.Request(base + "/pc/result?id=" + sent["id"], headers=hdr)
+        try:
+            with urllib.request.urlopen(r, timeout=60) as res:
+                body = json.loads(res.read().decode("utf-8"))
+        except OSError:
+            continue
+        if body.get("pending"):
+            continue
+        if not body.get("ok"):
+            sys.exit("اللابتوب: " + str(body.get("error")))
+        return body.get("data")
+    sys.exit("ما وصلت نتيجة خلال %d ثانية (الأمر %s بالطابور)" % (wait, sent["id"]))
+
+
+def pc_main(args):
+    op, rest = args[0], args[1:]
+    if op == "get":
+        data = pc_call("get", {"path": rest[0]})
+        out = rest[1] if len(rest) > 1 else data["name"]
+        with open(out, "wb") as fh:
+            fh.write(base64.b64decode(data["b64"]))
+        return {"saved": out, "from": data["path"]}
+    if op == "put":
+        with open(rest[0], "rb") as fh:
+            b64 = base64.b64encode(fh.read()).decode("ascii")
+        return pc_call("put", {"path": rest[1], "b64": b64})
+    if op == "tender":
+        dry = flag(rest, "--dry")
+        src = rest[0]
+        if os.path.isfile(src):
+            with open(src, "rb") as fh:
+                b64 = base64.b64encode(fh.read()).decode("ascii")
+            return pc_call("tender", {"b64": b64, "name": os.path.basename(src), "dry": dry}, wait=900)
+        return pc_call("tender", {"path": src, "dry": dry}, wait=900)
+    simple = {
+        "roots": lambda: {}, "ls": lambda: {"path": rest[0]},
+        "find": lambda: {"path": rest[0], "pattern": rest[1] if len(rest) > 1 else "*"},
+        "mkdir": lambda: {"path": rest[0]}, "copy": lambda: {"from": rest[0], "to": rest[1]},
+        "pdf": lambda: {"path": rest[0], "out": rest[1] if len(rest) > 1 else ""},
+        "print": lambda: {"path": rest[0]}, "check": lambda: {"path": rest[0]},
+        "docs": lambda: {"days": rest[0] if rest else "30"},
+    }
+    if op not in simple:
+        sys.exit("أمر pc غير معروف: " + op)
+    return pc_call(op, simple[op]())
 
 
 def flag(args, name):
@@ -119,6 +197,8 @@ def main(argv):
             data = json.load(fh)
         out = call({"action": "tenders_sync", "tenders": data.get("tenders", []),
                     "brief": data.get("brief"), "push": push or False})
+    elif cmd == "pc":
+        out = pc_main(args)
     elif cmd == "tenders-list":
         out = call({"action": "tenders_list"})["tenders"]
     else:

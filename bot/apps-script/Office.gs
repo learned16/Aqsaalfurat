@@ -7,6 +7,9 @@
  *   🖥️ المكتب          حالة اللابتوب وأزرار: اطبع ملف، صفحة تجربة، رسالة على الشاشة، اقفل، نوّم، إعادة تشغيل، طفّي
  *   🖨️ اطبع (بأي ملف)  زر تحت ملفات الأرشيف وملفات الطلبات الجاهزة
  *   ✅ اطبعه (طلب)      موافقة المدير تدز ملفات النتائج للابتوب وتنطبع
+ *   📦 مناقصة جديدة     يدز «طلب مناقصة.xlsx» معبّى، ومصنع المناقصات باللابتوب يبني الحزمة ويحفظها بالأرشيف
+ *   📄 نموذج الطلب      يرسل نموذج الطلب الفارغ (من مجلد «مصنع المناقصات» بالدرايف)
+ *   ⏰ المستمسكات       المستمسكات اللي تنتهي خلال 45 يوم
  *
  * المسموح: صاحب البوت والمدير (isManager_).
  */
@@ -59,11 +62,13 @@ function laptopLine_(st) {
 function showOffice_(user) {
   if (!isManager_(user.id)) return showMenu_(user.chatId, '⛔ المكتب للمدير بس.');
   const st = workerCall_('/office/status');
-  const kb = [[btn_('📄 اطبع ملف', 'off:file')]]
+  const kb = [[btn_('📦 مناقصة جديدة', 'off:tender'), btn_('📄 نموذج الطلب', 'off:form')],
+    [btn_('📄 اطبع ملف', 'off:file'), btn_('⏰ المستمسكات', 'off:docs')]]
     .concat(rows_(Object.keys(OFFICE_BUTTONS).map(function (k) { return btn_(OFFICE_BUTTONS[k], 'off:' + k); }), 2));
   kb.push([btn_('🔄 تحديث', 'menu:office'), btn_('🏠 القائمة', 'off:home')]);
   send_(user.chatId, '🖥️ <b>المكتب</b>\n' + laptopLine_(st) +
-    '\n\n• اطبع أي ملف: دوس «اطبع ملف» ودزه، أو دوس 🖨️ تحت أي ملف بالأرشيف.\n• الطلبات الجاهزة تنطبع لمّا توافق عليها.', kb);
+    '\n\n• مناقصة: خذ «نموذج الطلب»، عبّيه، ودزه بـ«مناقصة جديدة». الحزمة تجهز بالأرشيف خلال دقايق.' +
+    '\n• اطبع أي ملف: دوس «اطبع ملف» ودزه، أو دوس 🖨️ تحت أي ملف بالأرشيف.\n• الطلبات الجاهزة تنطبع لمّا توافق عليها.', kb);
 }
 
 function handleOfficeButton_(user, action) {
@@ -74,6 +79,13 @@ function handleOfficeButton_(user, action) {
     return send_(user.chatId, '📄 دزلي الملف (PDF أو Word أو صورة) وينطبع بالمكتب.\nتكدر تدز أكثر من ملف. من تخلص دوس /start',
       [[btn_('❌ إلغاء', 'off:home')]]);
   }
+  if (action === 'tender') {
+    setState_(user.chatId, { flow: 'tender', step: 0, data: {}, files: [] });
+    return send_(user.chatId, '📦 دزلي «طلب مناقصة.xlsx» معبّى (الشركة، الجهة، رقم الدعوة، والمواد بالأسعار).\n' +
+      'المصنع باللابتوب يبني الحزمة كاملة ويحطها بالأرشيف ويدزلك الخلاصة.', [[btn_('📄 نموذج الطلب', 'off:form'), btn_('❌ إلغاء', 'off:home')]]);
+  }
+  if (action === 'form') return sendJobForm_(user);
+  if (action === 'docs') return pushOffice_(user, { cmd: 'docs' }, '⏰ فحص المستمسكات');
   if (action === 'text') {
     setState_(user.chatId, { flow: 'screen', step: 0, data: {}, files: [] });
     return send_(user.chatId, '✍️ اكتب الرسالة اللي تطلع على شاشة اللابتوب:', [[btn_('❌ إلغاء', 'off:home')]]);
@@ -149,6 +161,16 @@ function handleOfficeInput_(user, state, msg) {
     clearState_(user.chatId);
     return pushOffice_(user, { cmd: 'text', text: text.slice(0, 300) }, '✍️ ' + text.slice(0, 60));
   }
+  if (state.flow === 'tender') {
+    const doc = msg.document;
+    if (!doc || !/\.(xlsx|json)$/i.test(doc.file_name || '')) {
+      return send_(user.chatId, '📦 دز ملف الطلب (xlsx)، أو دوس إلغاء.', [[btn_('❌ إلغاء', 'off:home')]]);
+    }
+    clearState_(user.chatId);
+    const blob = downloadTelegramFile_(doc.file_id, doc.file_name);
+    return pushOffice_(user, { cmd: 'tender', name: doc.file_name, b64: Utilities.base64Encode(blob.getBytes()) },
+      '📦 مناقصة: ' + doc.file_name);
+  }
   const ref = msg.document ? { id: msg.document.file_id, name: msg.document.file_name } :
     msg.photo ? { id: msg.photo[msg.photo.length - 1].file_id, name: 'صورة_' + Date.now() + '.jpg' } : null;
   if (!ref) return send_(user.chatId, '📄 دز ملف أو صورة حتى ينطبع، أو /start للقائمة.');
@@ -166,4 +188,17 @@ function printRequestOnLaptop_(user, req) {
   if (!files.length) return { ok: false, error: 'ماكو ملفات بمجلد النتائج' };
   files.forEach(function (f) { printBlob_(user, driveFileBlob_(f)); });
   return { ok: true, count: files.length };
+}
+
+/** نموذج «طلب مناقصة.xlsx» الفارغ من مجلد «مصنع المناقصات» بالدرايف (يسويه برنامج اللابتوب). */
+function sendJobForm_(user) {
+  if (!isManager_(user.id)) return;
+  const it = DriveApp.getFilesByName('طلب مناقصة.xlsx');
+  while (it.hasNext()) {
+    const f = it.next();
+    if (f.isTrashed()) continue;
+    const res = sendDriveFile_(user.chatId, f.getId(), '📄 نموذج طلب مناقصة: عبّي ورقة «البيانات» وورقة «المواد»، ودزه بـ«📦 مناقصة جديدة».');
+    if (res.ok) return;
+  }
+  send_(user.chatId, '⚠️ ما لكيت «طلب مناقصة.xlsx» بالدرايف. ينسوّى لمّا ينتصب برنامج اللابتوب (مجلد «مصنع المناقصات»).');
 }

@@ -26,6 +26,15 @@
  *   POST /office/push    {cmd, text?, chat?, name?, b64?}  أمر، أو ملف للطباعة (cmd = printfile)
  *   GET  /office/status  نفس الحالة فوك
  *   نتيجة الأمر ترجع لنفس الشخص اللي دزّه بالبوت (chat)، ونسخة لصاحب البوت.
+ *   cmd = tender: طلب مناقصة (xlsx) يبنيه مصنع المناقصات باللابتوب. cmd = docs: المستمسكات اللي تنتهي.
+ *
+ * «إيد Claude» (bot/bridge.py pc ...) — هيدر X-PC-Key = PC_KEY (متغير Secret بالوسيط وبيئة الجلسة):
+ *   POST /pc/cmd     {op, args}  → {id}   أوامر ثابتة: roots ls find get put mkdir copy pdf print tender check docs
+ *   GET  /pc/result  ?id=        → النتيجة أو {pending:true}
+ *   اللابتوب: POST /pc/result {id, ok, data|error}، GET /pc/args?id= (للملفات الكبيرة)
+ *
+ * زر «🖨️ اطبع» تحت رسالة اللابتوب (لمّا /office/done بيه print = مسار ملف):
+ *   تلغرام يرسل الضغطة (callback pcpr:<tk>) لنفس الوسيط، فنمسكها هنا ونحط أمر طباعة بالطابور.
  *
  * لا تلصق هذا الملف بـ Cloudflare مباشرة: الصق bot/single/worker.js
  * (يتولّد بـ python3 bot/cloudflare/build.py ويكون بيه المكتب).
@@ -43,7 +52,10 @@ const OFFICE_CMDS = {
 };
 
 // أوامر يكدر البوت يدزها للابتوب
-const PUSH_CMDS = ['print', 'shutdown', 'restart', 'sleep', 'lock', 'text', 'printfile'];
+const PUSH_CMDS = ['print', 'shutdown', 'restart', 'sleep', 'lock', 'text', 'printfile', 'tender', 'docs'];
+const FILE_CMDS = ['printfile', 'tender'];
+const PC_OPS = ['roots', 'ls', 'find', 'get', 'put', 'mkdir', 'copy', 'pdf', 'print', 'tender', 'check', 'docs'];
+const DAY = 24 * 3600;
 const FILE_TTL = 3 * 24 * 3600; // ملف الطباعة ينمسح من KV وحده بعد 3 أيام إذا ما انسحب
 
 export default {
@@ -60,6 +72,7 @@ export default {
     if (url.pathname === '/office/status') return officeStatus(request, env);
     if (url.pathname === '/office/push') return officePush(request, env);
     if (url.pathname === '/office/file') return officeFile(request, env, url);
+    if (url.pathname.startsWith('/pc/')) return pcRoute(request, env, url);
     if (request.method !== 'POST') {
       return new Response('Aqsa bot relay is running', { status: 200 });
     }
@@ -68,6 +81,11 @@ export default {
       return new Response('forbidden', { status: 403 });
     }
     const body = await request.text();
+    // ضغطة زر «اطبع» تحت رسالة اللابتوب: نعالجها هنا، ما تروح لـ Apps Script
+    if (body.indexOf('"pcpr:') >= 0) {
+      const handled = await printButton(env, body);
+      if (handled) return new Response('ok', { status: 200 });
+    }
     const target = env.GAS_URL + (env.GAS_URL.includes('?') ? '&' : '?') + 'tg=' + encodeURIComponent(env.TG_SECRET);
     // Apps Script ينفّذ doPost قبل ما يرد بالتحويل، فما نحتاج نتبع التحويل
     ctx.waitUntil(fetch(target, {
@@ -116,17 +134,41 @@ async function enqueue(env, cmd) {
   return cmd.id;
 }
 
-async function tellChat(env, chatId, text) {
-  const res = await fetch('https://api.telegram.org/bot' + env.TG_TOKEN + '/sendMessage', {
+async function tg(env, method, payload) {
+  const res = await fetch('https://api.telegram.org/bot' + env.TG_TOKEN + '/' + method, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text })
+    body: JSON.stringify(payload)
   });
   return res.ok;
 }
 
-function tellOwner(env, text) {
-  return tellChat(env, env.OWNER_ID, text);
+function tellChat(env, chatId, text, markup) {
+  // رسالة تلغرام حدها 4096 حرف
+  const payload = { chat_id: chatId, text: String(text).slice(0, 4000) };
+  if (markup) payload.reply_markup = markup;
+  return tg(env, 'sendMessage', payload);
+}
+
+function tellOwner(env, text, markup) {
+  return tellChat(env, env.OWNER_ID, text, markup);
+}
+
+/** ضغطة «🖨️ اطبع»: صاحب البوت أو اللي وصلته الرسالة. */
+async function printButton(env, body) {
+  let u;
+  try { u = JSON.parse(body); } catch (e) { return false; }
+  const cb = u.callback_query;
+  if (!cb || typeof cb.data !== 'string' || cb.data.indexOf('pcpr:') !== 0) return false;
+  const rec = env.OFFICE_KV ? JSON.parse((await env.OFFICE_KV.get('pp:' + cb.data.slice(5))) || 'null') : null;
+  const who = String(cb.from && cb.from.id);
+  if (!rec || (who !== String(env.OWNER_ID) && rec.chats.indexOf(who) < 0)) {
+    await tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, text: 'الزر انتهى أو مو إلك' });
+    return true;
+  }
+  await enqueue(env, { cmd: 'printpath', path: rec.path, chat: who });
+  await tg(env, 'answerCallbackQuery', { callback_query_id: cb.id, text: '🖨️ انرسل للطابعة' });
+  return true;
 }
 
 /** أمر من البوت للابتوب. الملف (b64) ينحفظ بـ KV والابتوب يسحبه بـ /office/file. */
@@ -137,7 +179,7 @@ async function officePush(request, env) {
   try { data = await request.json(); } catch (e) { return json({ ok: false, error: 'bad json' }, 400); }
   if (!data || PUSH_CMDS.indexOf(data.cmd) < 0) return json({ ok: false, error: 'unknown command' }, 400);
   const cmd = { cmd: data.cmd, text: String(data.text || '').slice(0, 300), chat: String(data.chat || '') };
-  if (data.cmd === 'printfile') {
+  if (FILE_CMDS.indexOf(data.cmd) >= 0) {
     if (typeof data.b64 !== 'string' || !data.b64) return json({ ok: false, error: 'no file' }, 400);
     const bin = atob(data.b64);
     const bytes = new Uint8Array(bin.length);
@@ -182,8 +224,16 @@ async function officeDone(request, env) {
   if (!text) return new Response('empty', { status: 400 });
   // الأمر اللي جا من البوت ترجع نتيجته لنفس الشخص، ونسخة لصاحب البوت
   const chat = String((data && data.chat) || '');
-  if (/^-?\d+$/.test(chat) && chat !== String(env.OWNER_ID)) await tellChat(env, chat, '💻 ' + text);
-  const ok = await tellOwner(env, '💻 اللابتوب\n' + text);
+  const toChat = /^-?\d+$/.test(chat) && chat !== String(env.OWNER_ID);
+  let markup = null;
+  if (data && typeof data.print === 'string' && data.print && env.OFFICE_KV) {
+    const tk = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const chats = [String(env.OWNER_ID)].concat(toChat ? [chat] : []);
+    await env.OFFICE_KV.put('pp:' + tk, JSON.stringify({ path: data.print.slice(0, 500), chats }), { expirationTtl: 14 * DAY });
+    markup = { inline_keyboard: [[{ text: '🖨️ اطبع الحزمة', callback_data: 'pcpr:' + tk }]] };
+  }
+  if (toChat) await tellChat(env, chat, '💻 ' + text, markup);
+  const ok = await tellOwner(env, '💻 اللابتوب\n' + text, markup);
   return new Response(ok ? 'ok' : 'telegram error', { status: ok ? 200 : 502 });
 }
 
@@ -191,4 +241,60 @@ async function officeStatus(request, env) {
   if (!pinOk(request, env) && !botOk(request, env)) return new Response('forbidden', { status: 403 });
   const seen = env.OFFICE_KV ? Number((await env.OFFICE_KV.get('seen')) || 0) : 0;
   return json({ seen, now: Date.now(), kv: !!env.OFFICE_KV });
+}
+
+// ---------------------------------------------------------------- إيد Claude
+
+function pcOk(request, env) {
+  return !!env.PC_KEY && request.headers.get('X-PC-Key') === env.PC_KEY;
+}
+
+async function pcRoute(request, env, url) {
+  if (!env.OFFICE_KV) return json({ ok: false, error: 'OFFICE_KV not bound' }, 503);
+  const id = url.searchParams.get('id') || '';
+  const path = url.pathname;
+  if (path === '/pc/cmd' && request.method === 'POST') {
+    if (!pcOk(request, env)) return new Response('forbidden', { status: 403 });
+    let data;
+    try { data = await request.json(); } catch (e) { return json({ ok: false, error: 'bad json' }, 400); }
+    if (!data || PC_OPS.indexOf(data.op) < 0) return json({ ok: false, error: 'unknown op' }, 400);
+    const cmd = { cmd: 'pc', op: data.op };
+    const args = data.args || {};
+    const raw = JSON.stringify(args);
+    cmd.id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    // الملفات الكبيرة ما تنحط بالطابور: تنحفظ لحالها واللابتوب يسحبها
+    if (raw.length > 20000) {
+      await env.OFFICE_KV.put('pa:' + cmd.id, raw, { expirationTtl: DAY });
+      cmd.argsRef = true;
+    } else {
+      cmd.args = args;
+    }
+    const q = JSON.parse((await env.OFFICE_KV.get('queue')) || '[]');
+    q.push(cmd);
+    await env.OFFICE_KV.put('queue', JSON.stringify(q.slice(-20)));
+    const seen = Number((await env.OFFICE_KV.get('seen')) || 0);
+    return json({ ok: true, id: cmd.id, seen, now: Date.now() });
+  }
+  if (path === '/pc/result' && request.method === 'GET') {
+    if (!pcOk(request, env)) return new Response('forbidden', { status: 403 });
+    const r = await env.OFFICE_KV.get('pr:' + id);
+    if (!r) return json({ ok: true, pending: true });
+    return new Response(r, { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+  }
+  if (path === '/pc/result' && request.method === 'POST') {
+    if (!pinOk(request, env)) return new Response('forbidden', { status: 403 });
+    const body = await request.text();
+    let data;
+    try { data = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'bad json' }, 400); }
+    if (!/^p[a-z0-9]+$/.test(String(data.id || ''))) return json({ ok: false, error: 'bad id' }, 400);
+    await env.OFFICE_KV.put('pr:' + data.id, body, { expirationTtl: DAY });
+    return json({ ok: true });
+  }
+  if (path === '/pc/args') {
+    if (!pinOk(request, env)) return new Response('forbidden', { status: 403 });
+    const r = await env.OFFICE_KV.get('pa:' + id);
+    if (!r) return new Response('gone', { status: 404 });
+    return new Response(r, { headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+  }
+  return new Response('not found', { status: 404 });
 }
