@@ -33,6 +33,17 @@ if ($dataDir) {
 # المجلدات اللي Claude يكدر يشتغل بيها (+ مجلد الطباعة ومجلد المصنع دائماً)
 $allow = @()
 foreach ($a in @($cfg.allow) + @($printDir, $dataDir)) { if ($a) { $allow += [IO.Path]::GetFullPath($a).TrimEnd('\') + '\' } }
+# Google Drive للكمبيوتر: إذا انصّب بعد التنصيب، ينضاف وحده للمجلدات المسموحة (بدون إعادة تنصيب)
+# (الدرايف يتأخر بعد تشغيل الويندوز، فـ Allowed-Path يعيد المحاولة إذا ما لكاه أول مرة)
+function Add-DriveRoot {
+  $root = @('G:\My Drive', 'G:\محرك Drive الخاص بي', "$env:USERPROFILE\Google Drive", "$env:USERPROFILE\My Drive") |
+    Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+  if (-not $root) { return $false }
+  $d = [IO.Path]::GetFullPath($root).TrimEnd('\') + '\'
+  if ($script:allow -notcontains $d) { $script:allow += $d; return $true }
+  return $false
+}
+Add-DriveRoot | Out-Null
 # الطباعة والتحويل لهاي الأنواع بس (مستندات، مو برامج)
 $docExt = @('.pdf', '.doc', '.docx', '.rtf', '.txt', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff')
 # البرامج اللي يكدر Claude ينصّبها (بموافقة): الاسم ← معرّف winget
@@ -215,8 +226,12 @@ function Daily-Docs {
 function Allowed-Path($p) {
   if (-not $p) { throw 'المسار فارغ' }
   $full = [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables($p))
-  foreach ($a in $allow) {
-    if (($full.TrimEnd('\') + '\').StartsWith($a, [StringComparison]::OrdinalIgnoreCase)) { return $full }
+  foreach ($try in 1..2) {
+    foreach ($a in $allow) {
+      if (($full.TrimEnd('\') + '\').StartsWith($a, [StringComparison]::OrdinalIgnoreCase)) { return $full }
+    }
+    # يمكن الدرايف اشتغل بعد البرنامج: نضيفه ونعيد مرة وحدة
+    if (-not (Add-DriveRoot)) { break }
   }
   throw "المسار خارج المجلدات المسموحة: $full"
 }
