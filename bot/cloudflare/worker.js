@@ -35,7 +35,7 @@
  *
  * مكتبة الأوامر (كلها ثابتة بالبرنامج، ماكو أمر يشغّل كود عشوائي):
  *   🟢 تتنفذ فوراً: roots ls find get put mkdir copy pdf print tender check docs status printers zip log
- *   🟡 تحتاج موافقة صاحب البوت: install default_printer clear_queue close_word screenshot wake_time
+ *   🟡 تحتاج موافقة صاحب البوت: install default_printer clear_queue close_word screenshot wake_time update
  *      توصله رسالة بالأمر ومدخلاته ويه ✅ نفّذ / ❌ ارفض (pcok:/pcno:، يمسكها الوسيط). الموافقة خلال ساعة.
  *
  * زر «🖨️ اطبع» تحت رسالة اللابتوب (لمّا /office/done بيه print = مسار ملف):
@@ -68,7 +68,8 @@ const APPROVE_OPS = {
   clear_queue: 'إلغاء أوراق عالقة بطابور الطباعة',
   close_word: 'سد Word (إذا علگ) — أي ملف مو محفوظ يروح',
   screenshot: 'صورة لشاشة اللابتوب',
-  wake_time: 'تغيير وقت تصحية اللابتوب اليومي'
+  wake_time: 'تغيير وقت تصحية اللابتوب اليومي',
+  update: 'تحديث برنامج المكتب (حزمة موقّعة برمز التحديث، والقديمة تنحفظ)'
 };
 const APPROVAL_TTL = 3600;
 const DAY = 24 * 3600;

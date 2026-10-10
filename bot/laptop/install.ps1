@@ -26,6 +26,9 @@ $worker = (Ask 'رابط الوسيط' $defWorker) -replace '/office/?$', ''
 $pin = ''
 if ($old -and $old.pin) { $pin = Read-Host 'رمز المكتب (Enter = نفس الرمز السابق)' } else { $pin = Read-Host 'رمز المكتب (نفس OFFICE_PIN)' }
 if (-not $pin -and $old) { $pin = $old.pin }
+# رمز التحديث: نفس UPDATE_KEY ببيئة جلسة Claude. اللابتوب ما يقبل أي تحديث عن بعد إلا موقّع بيه
+if ($old -and $old.updateKey) { $ukey = Read-Host 'رمز التحديث (Enter = نفس الرمز السابق)' } else { $ukey = Read-Host 'رمز التحديث (نفس UPDATE_KEY، فارغ = بلا تحديث عن بعد)' }
+if (-not $ukey -and $old) { $ukey = $old.updateKey }
 
 $drive = @('G:\My Drive', 'G:\محرك Drive الخاص بي', "$env:USERPROFILE\Google Drive", "$env:USERPROFILE\My Drive") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if ($drive) { Write-Host "✓ لكيت Google Drive: $drive" -ForegroundColor Green }
@@ -100,13 +103,20 @@ if (-not (Get-Command winword.exe -ErrorAction SilentlyContinue) -and -not (Test
 }
 
 @{ worker = $worker; pin = $pin.Trim(); printFolder = $folder; factoryData = $data; python = $(if ($factoryOk) { $py } else { '' });
-   allow = @($allow); wake = $wake } | ConvertTo-Json | Set-Content -Path $cfgPath -Encoding UTF8
-Copy-Item -Path (Join-Path $PSScriptRoot 'agent.ps1') -Destination (Join-Path $dir 'agent.ps1') -Force
+   allow = @($allow); wake = $wake; updateKey = "$ukey".Trim() } | ConvertTo-Json | Set-Content -Path $cfgPath -Encoding UTF8
+# يوكّف أي نسخة شغّالة من البرنامج (والـ launcher) قبل ما نبدّل الملفات
+Stop-ScheduledTask -TaskName 'AqsaOffice' -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -like '*AqsaOffice\agent.ps1*' -or $_.CommandLine -like '*AqsaOffice\launcher.ps1*' } |
+  ForEach-Object { Invoke-CimMethod -InputObject $_ -MethodName Terminate | Out-Null }
+foreach ($f in @('agent.ps1', 'launcher.ps1', 'VERSION')) {
+  Copy-Item -Path (Join-Path $PSScriptRoot $f) -Destination (Join-Path $dir $f) -Force
+}
 New-Item -ItemType Directory -Force -Path $folder | Out-Null
 
-# يشتغل وحده كل ما تدخل للويندوز، مخفي، ويرجع يشتغل إذا وكف
-Stop-ScheduledTask -TaskName 'AqsaOffice' -ErrorAction SilentlyContinue
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $dir 'agent.ps1') + '"')
+# يشتغل وحده كل ما تدخل للويندوز، مخفي، ويرجع يشتغل إذا وكف.
+# المهمة تشغّل launcher.ps1، وهو يشغّل agent.ps1 ويرجّع النسخة القديمة إذا تحديث خرب
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $dir 'launcher.ps1') + '"')
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
 Register-ScheduledTask -TaskName 'AqsaOffice' -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
@@ -124,7 +134,8 @@ if ($wake) {
 
 Start-ScheduledTask -TaskName 'AqsaOffice'
 Write-Host ''
-Write-Host 'خلص التنصيب. لازم توصلك رسالة بتلغرام: «اللابتوب اشتغل وبرنامج المكتب متصل».' -ForegroundColor Green
+$ver = (Get-Content (Join-Path $dir 'VERSION') -Raw).Trim()
+Write-Host "خلص التنصيب (نسخة $ver). لازم توصلك رسالة بتلغرام: «اللابتوب اشتغل وبرنامج المكتب متصل»." -ForegroundColor Green
 Write-Host "• أي ملف تحطه بـ $folder ينطبع وحده."
 if ($factoryOk) { Write-Host "• مناقصة: عبّي «طلب مناقصة.xlsx» من $data وحطه بمجلد «طلبات» أو دزه للبوت." }
 Write-Host '• المهم قبل أول مناقصة: افتح الشركات.json وتأكد من «نموذج_الكتاب» و«الرقم_التالي»، وعبّي مستمسكات.xlsx.'

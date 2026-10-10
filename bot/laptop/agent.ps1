@@ -6,10 +6,11 @@
 #   - «إيد Claude»: مكتبة أوامر ثابتة من جلسة Claude، داخل المجلدات المسموحة بس، وماكو تشغيل كود عشوائي:
 #       🟢 فوراً: تصفح، سحب ملف، حط ملف، PDF، طباعة، المصنع، حالة اللابتوب، الطابعات، zip، السجل
 #       🟡 بموافقة صاحب البوت بتلغرام (الوسيط يمسكها لحد ما يوافق): تنصيب برنامج من قائمة ثابتة،
-#          الطابعة الافتراضية، إلغاء طابور الطباعة، سد Word، صورة الشاشة، وقت التصحية
+#          الطابعة الافتراضية، إلغاء طابور الطباعة، سد Word، صورة الشاشة، وقت التصحية،
+#          وتحديث البرنامج نفسه (حزمة موقّعة برمز التحديث، والنسخة القديمة تنحفظ وترجع إذا الجديدة خربت)
 # ويراقب مجلدين: «للطباعة» (أي ملف ينطبع) و«مصنع المناقصات\طلبات» (أي طلب ينبني).
 # ما يحذف أي ملف: المطبوع ينتقل لـ«انطبع»، والطلب لـ«تم» أو «فشل»، وأي ملف يتبدل تنحفظ نسخته القديمة.
-# الإعدادات بـ %APPDATA%\AqsaOffice\config.json (يسويها install.ps1).
+# الإعدادات بـ %APPDATA%\AqsaOffice\config.json (يسويها install.ps1). يشتغل من launcher.ps1.
 
 $ErrorActionPreference = 'Continue'
 $dir = Join-Path $env:APPDATA 'AqsaOffice'
@@ -47,6 +48,12 @@ $installable = @{
 $started = Get-Date
 $utf8 = New-Object Text.UTF8Encoding $false
 [Console]::OutputEncoding = $utf8
+$version = '0'
+$versionFile = Join-Path $dir 'VERSION'
+if (Test-Path -LiteralPath $versionFile) { $version = (Get-Content -LiteralPath $versionFile -Raw -Encoding UTF8).Trim() }
+$pendFile = Join-Path $dir 'update-pending.json'
+$rollFile = Join-Path $dir 'update-rollback.json'
+$restartNow = $false
 
 function Log($m) {
   Add-Content -Path $logFile -Value ('{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $m) -Encoding UTF8
@@ -372,7 +379,92 @@ function Pc-Op($c) {
       Report "⏰ صار وقت التصحية اليومي $t"
       return @{ wake = $t }
     }
+    'update' { return (Apply-Update $a) }
     default { throw "أمر غير معروف: $($c.op)" }
+  }
+}
+
+# ------------------------------------------------------------ التحديث عن بعد
+
+# الملفات اللي يبدّلها التحديث بس: agent.ps1 وVERSION وfactory\*.py (launcher.ps1 والإعدادات ما تتغير)
+function Copy-Program($from, $to) {
+  New-Item -ItemType Directory -Force -Path $to | Out-Null
+  foreach ($f in @('agent.ps1', 'VERSION')) {
+    $src = Join-Path $from $f
+    if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $to $f) -Force }
+  }
+  $fsrc = Join-Path $from 'factory'
+  if (Test-Path -LiteralPath $fsrc) {
+    $fdst = Join-Path $to 'factory'
+    New-Item -ItemType Directory -Force -Path $fdst | Out-Null
+    Get-ChildItem -LiteralPath $fsrc -Filter '*.py' -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $fdst $_.Name) -Force }
+  }
+}
+
+function Hex($bytes) { return -join ($bytes | ForEach-Object { $_.ToString('x2') }) }
+
+# a = {version, file, sha256, sig, notes}. يوصل هنا بس بعد موافقة صاحب البوت بتلغرام.
+function Apply-Update($a) {
+  if (-not $cfg.updateKey) { throw 'رمز التحديث مو مضبوط باللابتوب (أعد التنصيب واكتب رمز التحديث)' }
+  $ver = "$($a.version)".Trim()
+  if ($ver -notmatch '^\d+(\.\d+){1,3}$') { throw "رقم النسخة غلط: $ver" }
+  if ($version -match '^\d+(\.\d+){1,3}$' -and [version]$ver -le [version]$version) { throw "النسخة $ver مو أحدث من الحالية $version" }
+  $zip = Allowed-Path $a.file
+  if ([IO.Path]::GetExtension($zip).ToLower() -ne '.zip') { throw 'التحديث لازم ملف .zip' }
+  $sha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLower()
+  if ($sha -ne "$($a.sha256)".ToLower()) { throw 'بصمة الملف ما تطابق (الملف تغيّر بالطريق)' }
+  # التوقيع: HMAC-SHA256 برمز التحديث. بدونه ماكو أحد يكدر ينصّب شي حتى لو وصل للدرايف أو للوسيط
+  $hm = [Security.Cryptography.HMACSHA256]::new($utf8.GetBytes([string]$cfg.updateKey))
+  $expect = Hex ($hm.ComputeHash($utf8.GetBytes("aqsa-office|$ver|$sha")))
+  if ($expect -ne "$($a.sig)".ToLower()) { throw 'التوقيع غلط: التحديث انرفض' }
+
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $stage = Join-Path $dir "_staging\$ver-$stamp"
+  Expand-Archive -LiteralPath $zip -DestinationPath $stage -Force
+  $newAgent = Join-Path $stage 'agent.ps1'
+  if (-not (Test-Path -LiteralPath $newAgent)) { throw 'الحزمة ناقصها agent.ps1' }
+  $sv = Join-Path $stage 'VERSION'
+  if (-not (Test-Path -LiteralPath $sv) -or (Get-Content -LiteralPath $sv -Raw -Encoding UTF8).Trim() -ne $ver) { throw 'VERSION بالحزمة ما يطابق رقم النسخة' }
+  # نفحص الكود قبل ما نبدّل: أي خطأ كتابة يوكّف التحديث والنسخة الحالية تبقى
+  $tokens = $null; $errs = $null
+  [Management.Automation.Language.Parser]::ParseFile($newAgent, [ref]$tokens, [ref]$errs) | Out-Null
+  if ($errs -and $errs.Count) { throw ('agent.ps1 الجديد بيه خطأ: ' + $errs[0].Message) }
+  if ($python) {
+    $env:PYTHONIOENCODING = 'utf-8'
+    foreach ($f in @(Get-ChildItem -LiteralPath (Join-Path $stage 'factory') -Filter '*.py' -File -ErrorAction SilentlyContinue)) {
+      $out = & $python -c "import ast,sys; ast.parse(open(sys.argv[1],encoding='utf-8').read())" $f.FullName 2>&1
+      if ($LASTEXITCODE -ne 0) { throw ("المصنع $($f.Name) بيه خطأ: " + (($out | Select-Object -Last 1) -join '')) }
+    }
+  }
+
+  # النسخة الحالية تنحفظ، والـ launcher يرجّعها إذا الجديدة ما اشتغلت
+  $backup = Join-Path $dir "versions\$version-$stamp"
+  $n = 1
+  while (Test-Path -LiteralPath $backup) { $backup = Join-Path $dir "versions\$version-$stamp-$n"; $n++ }
+  Copy-Program $dir $backup
+  Copy-Program $stage $dir
+  @{ from = $version; to = $ver; backup = $backup; tries = 0; at = (Get-Date).ToString('yyyy-MM-dd HH:mm'); notes = "$($a.notes)" } |
+    ConvertTo-Json | Set-Content -LiteralPath $pendFile -Encoding UTF8
+  Log "update $version -> $ver applied, restarting"
+  $script:restartNow = $true
+  return @{ from = $version; to = $ver; backup = $backup; restarting = $true }
+}
+
+# بعد ما البرنامج يتصل بالوسيط: إذا جاي من تحديث نأكده، وإذا الـ launcher رجّع نسخة قديمة نبلّغ
+function Confirm-Update {
+  if (Test-Path -LiteralPath $pendFile) {
+    $p = Get-Content -LiteralPath $pendFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ("$($p.to)" -eq $version) {
+      Move-Item -LiteralPath $pendFile -Destination (Join-Path $dir 'update-last.json') -Force
+      $t = "✅ تحدّث برنامج المكتب من $($p.from) إلى $version"
+      if ($p.notes) { $t += "`n$($p.notes)" }
+      Report $t
+    }
+  }
+  if (Test-Path -LiteralPath $rollFile) {
+    $p = Get-Content -LiteralPath $rollFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    Move-Item -LiteralPath $rollFile -Destination (Join-Path $dir 'update-last.json') -Force
+    Report "⚠️ التحديث $($p.to) ما اشتغل، فرجعت النسخة $version وحدها"
   }
 }
 
@@ -395,7 +487,7 @@ function Laptop-Status {
   $waiting = 0
   if ($jobsDir) { $waiting = @(Get-ChildItem -Path $jobsDir -File -ErrorAction SilentlyContinue).Count }
   return @{
-    computer = $env:COMPUTERNAME; user = $env:USERNAME
+    computer = $env:COMPUTERNAME; user = $env:USERNAME; version = $version
     windows = "$($os.Caption)"; upSince = $(if ($os) { $os.LastBootUpTime.ToString('yyyy-MM-dd HH:mm') } else { '' })
     agentSince = $started.ToString('yyyy-MM-dd HH:mm')
     disks = @($disks)
@@ -410,7 +502,7 @@ function Laptop-Status {
 function Status-Text {
   $s = Laptop-Status
   $d = ($s.disks | ForEach-Object { "$($_.drive): $($_.freeGB) GB" }) -join '، '
-  $t = "💻 حالة اللابتوب ($($s.computer))`n• شغّال من: $($s.upSince)`n• البطارية: $($s.battery)`n• المساحة الفارغة: $d"
+  $t = "💻 حالة اللابتوب ($($s.computer)) — برنامج المكتب $($s.version)`n• شغّال من: $($s.upSince)`n• البطارية: $($s.battery)`n• المساحة الفارغة: $d"
   $t += "`n• الطابعة الافتراضية: $($s.defaultPrinter)"
   $t += "`n• Word: " + $(if ($s.word) { '✓' } else { '✗' }) + '  • Python (المصنع): ' + $(if ($s.python) { '✓' } else { '✗' }) + '  • Google Drive: ' + $(if ($s.googleDrive) { '✓ شغّال' } else { '✗ مطفي' })
   if ($s.printFolderWaiting) { $t += "`n• ملفات تنتظر الطباعة: $($s.printFolderWaiting)" }
@@ -493,8 +585,9 @@ function Watch-PrintFolder {
 }
 
 Log 'agent started'
-Report '💻 اللابتوب اشتغل وبرنامج المكتب متصل'
+Report "💻 اللابتوب اشتغل وبرنامج المكتب متصل (نسخة $version)"
 $lastBeat = [datetime]::MinValue
+$confirmed = $false
 while ($true) {
   $beat = ((Get-Date) - $lastBeat).TotalMinutes -ge 3
   $uri = "$base/office/poll"
@@ -502,10 +595,16 @@ while ($true) {
   try {
     $r = Invoke-RestMethod -Uri $uri -Headers $headers -TimeoutSec 20
     if ($beat) { $lastBeat = Get-Date }
+    if (-not $confirmed) {
+      $confirmed = $true
+      try { Confirm-Update } catch { Log "confirm update: $_" }
+    }
     foreach ($c in $r.cmds) {
       try { Run-Command $c } catch { Log "cmd failed $($c.cmd): $_"; Report "⚠️ ما تنفّذ: $($c.cmd) $($c.name) — $_" $c.chat }
     }
   } catch { Log "poll: $_" }
+  # بعد تحديث: نطلع، والـ launcher يشغّل النسخة الجديدة
+  if ($restartNow) { Report "⬆️ انحطت النسخة الجديدة، البرنامج يعيد تشغيل نفسه"; exit 0 }
   Watch-PrintFolder
   Watch-Jobs
   Daily-Docs

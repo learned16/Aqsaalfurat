@@ -31,6 +31,8 @@
   bridge.py pc install <sumatra|libreoffice|python|gdrive|7zip|chrome|acrobat>
   bridge.py pc default_printer "<اسم الطابعة>" | clear_queue | close_word | wake_time 07:45
   bridge.py pc screenshot [ملف.png]
+  bridge.py pc update [--notes "شنو تغيّر"]  يحزم bot/laptop (النسخة من VERSION)، يوقّعه بـ UPDATE_KEY،
+                                              يحطه بمجلد المصنع («_تحديثات»)، ويطلب الموافقة للتنصيب
 اللابتوب يسأل كل 5 ثواني، فالنتيجة توصل خلال ثواني إذا شغّال.
 """
 import base64
@@ -136,6 +138,8 @@ def pc_main(args):
         with open(out, "wb") as fh:
             fh.write(base64.b64decode(data["b64"]))
         return {"saved": out}
+    if op == "update":
+        return pc_update(rest)
     if op == "tender":
         dry = flag(rest, "--dry")
         src = rest[0]
@@ -160,6 +164,27 @@ def pc_main(args):
     if op not in simple:
         sys.exit("أمر pc غير معروف: " + op)
     return pc_call(op, simple[op]())
+
+
+def pc_update(rest):
+    key = os.environ.get("UPDATE_KEY")
+    if not key:
+        sys.exit("UPDATE_KEY لازم يكون بالبيئة (نفس رمز التحديث اللي انكتب وقت تنصيب اللابتوب)")
+    notes = option(rest, "--notes") or ""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "laptop"))
+    import package
+    ver = package.version()
+    zpath = package.update_zip()
+    sha = package.sha256_file(zpath)
+    roots = pc_call("roots", {})
+    if not roots.get("data"):
+        sys.exit("مجلد المصنع مو مضبوط باللابتوب")
+    target = roots["data"].rstrip("\\") + "\\_تحديثات\\" + zpath.name
+    with open(zpath, "rb") as fh:
+        pc_call("put", {"path": target, "b64": base64.b64encode(fh.read()).decode("ascii")})
+    print("📦 انحط %s باللابتوب؛ هسه ينتظر موافقتك بتلغرام" % zpath.name, file=sys.stderr)
+    return pc_call("update", {"version": ver, "notes": notes[:300], "file": target,
+                              "sha256": sha, "sig": package.sign(key, ver, sha)})
 
 
 def flag(args, name):
