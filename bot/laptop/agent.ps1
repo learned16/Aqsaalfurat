@@ -44,6 +44,14 @@ $installable = @{
   '7zip'        = '7zip.7zip'
   'chrome'      = 'Google.Chrome'
   'acrobat'     = 'Adobe.Acrobat.Reader.64-bit'
+  'edge'        = 'Microsoft.Edge'
+  'firefox'     = 'Mozilla.Firefox'
+  'notepadpp'   = 'Notepad++.Notepad++'
+  'vlc'         = 'VideoLAN.VLC'
+  'zoom'        = 'Zoom.Zoom'
+  'anydesk'     = 'AnyDeskSoftwareGmbH.AnyDesk'
+  'winrar'      = 'RARLab.WinRAR'
+  'office'      = 'Microsoft.Office'
 }
 $started = Get-Date
 $utf8 = New-Object Text.UTF8Encoding $false
@@ -378,6 +386,33 @@ function Pc-Op($c) {
       Register-ScheduledTask -TaskName 'AqsaOfficeWake' -Action $wa -Trigger $wt -Settings $ws -Force | Out-Null
       Report "⏰ صار وقت التصحية اليومي $t"
       return @{ wake = $t }
+    }
+    'office' {
+      $src = Allowed-Path $a.path
+      if (-not $python) { throw 'Python ناقص (المصنع مو منصّب)' }
+      # أوامر الكتابة تحفظ النسخة القديمة أول
+      if (@('xlsx_set', 'xlsx_append', 'docx_replace') -contains "$($a.op)") { Backup-Existing $src | Out-Null }
+      $req = @{}
+      foreach ($k in $a.PSObject.Properties.Name) { $req[$k] = $a.$k }
+      $req['path'] = $src
+      $reqFile = Join-Path $env:TEMP ('aqsa-office-' + $c.id + '.json')
+      [IO.File]::WriteAllText($reqFile, ($req | ConvertTo-Json -Depth 8 -Compress), $utf8)
+      $env:PYTHONIOENCODING = 'utf-8'
+      $out = & $python (Join-Path $dir 'factory\office.py') $reqFile 2>&1 | ForEach-Object { "$_" }
+      Remove-Item -LiteralPath $reqFile -Force -ErrorAction SilentlyContinue
+      $last = ($out | Where-Object { $_ -like '{*' } | Select-Object -Last 1)
+      if (-not $last) { throw ('office ما رجّع نتيجة: ' + (($out | Select-Object -Last 5) -join ' | ')) }
+      $r = $last | ConvertFrom-Json
+      if (-not $r.ok) { throw "office: $($r.error)" }
+      return $r
+    }
+    # ------------------------------------- 🟡 فتح رابط بالمتصفح (بموافقة صاحب البوت)
+    'open_url' {
+      $u = "$($a.url)"
+      if ($u -notmatch '^https?://') { throw 'الرابط لازم يبدي بـ http:// أو https://' }
+      Start-Process $u | Out-Null
+      Report "🌐 انفتح الرابط باللابتوب: $u"
+      return @{ opened = $u }
     }
     'update' { return (Apply-Update $a) }
     default { throw "أمر غير معروف: $($c.op)" }

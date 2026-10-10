@@ -27,10 +27,13 @@
   bridge.py pc tender <طلب.xlsx|json> [--dry]  يبني مناقصة بالمصنع (ملف محلي أو مسار باللابتوب)
   bridge.py pc check <مسار_طلب> | docs [أيام]
   bridge.py pc status | printers | log [سطور] | zip <مجلد> [ملف.zip]
+  bridge.py pc office <xlsx_read|xlsx_sheets|xlsx_set|xlsx_append|docx_read|docx_replace> <مسار> [--json '{...}']
+       مثال: office xlsx_read "G:\\...\\سجل.xlsx" | office xlsx_set <مسار> --json '{"cells":{"B2":777}}'
 مكتبة الأوامر الحساسة (توصل لصاحب البوت بتلغرام وما تتنفذ إلا يوافق خلال ساعة):
   bridge.py pc install <sumatra|libreoffice|python|gdrive|7zip|chrome|acrobat>
   bridge.py pc default_printer "<اسم الطابعة>" | clear_queue | close_word | wake_time 07:45
   bridge.py pc screenshot [ملف.png]
+  bridge.py pc open_url <https://...>         يفتح رابط بالمتصفح على اللابتوب
   bridge.py pc update [--notes "شنو تغيّر"]  يحزم bot/laptop (النسخة من VERSION)، يوقّعه بـ UPDATE_KEY،
                                               يحطه بمجلد المصنع («_تحديثات»)، ويطلب الموافقة للتنصيب
 اللابتوب يسأل كل 5 ثواني، فالنتيجة توصل خلال ثواني إذا شغّال.
@@ -140,6 +143,15 @@ def pc_main(args):
         return {"saved": out}
     if op == "update":
         return pc_update(rest)
+    if op == "office":
+        sub = rest[0]
+        extra = option(rest, "--json")
+        args = json.loads(extra) if extra else {}
+        args["op"] = sub
+        args["path"] = rest[1]
+        return pc_call("office", args)
+    if op == "open_url":
+        return pc_call("open_url", {"url": rest[0]})
     if op == "tender":
         dry = flag(rest, "--dry")
         src = rest[0]

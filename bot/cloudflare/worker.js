@@ -60,7 +60,7 @@ const OFFICE_CMDS = {
 const PUSH_CMDS = ['print', 'shutdown', 'restart', 'sleep', 'lock', 'text', 'printfile', 'tender', 'docs', 'status'];
 const FILE_CMDS = ['printfile', 'tender'];
 const PC_OPS = ['roots', 'ls', 'find', 'get', 'put', 'mkdir', 'copy', 'pdf', 'print', 'tender', 'check', 'docs',
-  'status', 'printers', 'zip', 'log'];
+  'status', 'printers', 'zip', 'log', 'office'];
 // الأوامر الحساسة: وصفها يطلع لصاحب البوت قبل الموافقة
 const APPROVE_OPS = {
   install: 'تنصيب برنامج من القائمة المسموحة',
@@ -69,6 +69,7 @@ const APPROVE_OPS = {
   close_word: 'سد Word (إذا علگ) — أي ملف مو محفوظ يروح',
   screenshot: 'صورة لشاشة اللابتوب',
   wake_time: 'تغيير وقت تصحية اللابتوب اليومي',
+  open_url: 'فتح رابط بالمتصفح على اللابتوب',
   update: 'تحديث برنامج المكتب (حزمة موقّعة برمز التحديث، والقديمة تنحفظ)'
 };
 const APPROVAL_TTL = 3600;
