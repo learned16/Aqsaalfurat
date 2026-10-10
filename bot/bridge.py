@@ -23,12 +23,19 @@
   bridge.py pc find <مسار> <نمط>               بحث (مثل *.docx)
   bridge.py pc get <مسار> [ملف_محلي]           يسحب ملف للجلسة
   bridge.py pc put <ملف_محلي> <مسار>           يحط ملف (النسخة القديمة تنحفظ بـ _نسخ_قبل_التعديل)
-  bridge.py pc mkdir <مسار> | copy <من> <إلى> | pdf <docx> [pdf] | print <مسار>
+  bridge.py pc mkdir <مسار> | copy <من> <إلى> | print <مسار>
   bridge.py pc tender <طلب.xlsx|json> [--dry]  يبني مناقصة بالمصنع (ملف محلي أو مسار باللابتوب)
   bridge.py pc check <مسار_طلب> | docs [أيام]
   bridge.py pc status | printers | log [سطور] | zip <مجلد> [ملف.zip]
-  bridge.py pc office <xlsx_read|xlsx_sheets|xlsx_set|xlsx_append|docx_read|docx_replace> <مسار> [--json '{...}']
-       مثال: office xlsx_read "G:\\...\\سجل.xlsx" | office xlsx_set <مسار> --json '{"cells":{"B2":777}}'
+  bridge.py pc office <أمر> [مسار] [--json '{...}']    Excel وWord وPowerPoint وPDF بلا فتح برنامج
+       Excel: xlsx_sheets | xlsx_read | xlsx_find | xlsx_set | xlsx_append | xlsx_new | xlsx_add_sheet
+       Word:  docx_read | docx_tables | docx_replace | docx_new | docx_append
+       PPT:   pptx_read | pptx_replace | pptx_new | pptx_add
+       PDF:   pdf_info | pdf_text | pdf_merge | pdf_split | pdf_rotate
+       أمثلة: office xlsx_read "G:\\...\\سجل.xlsx"
+              office xlsx_set <مسار> --json '{"cells":{"B2":777,"C2":"=B2*2"}}'
+              office pdf_merge --json '{"paths":["G:\\..\\a.pdf","G:\\..\\b.pdf"],"out":"G:\\..\\كامل.pdf"}'
+  bridge.py pc pdf <مسار Word/Excel/PowerPoint> [out.pdf]   تحويل لـ PDF بالبرنامج الحقيقي
 مكتبة الأوامر الحساسة (توصل لصاحب البوت بتلغرام وما تتنفذ إلا يوافق خلال ساعة):
   bridge.py pc install <sumatra|libreoffice|python|gdrive|7zip|chrome|acrobat>
   bridge.py pc default_printer "<اسم الطابعة>" | clear_queue | close_word | wake_time 07:45
@@ -144,11 +151,12 @@ def pc_main(args):
     if op == "update":
         return pc_update(rest)
     if op == "office":
-        sub = rest[0]
         extra = option(rest, "--json")
         args = json.loads(extra) if extra else {}
-        args["op"] = sub
-        args["path"] = rest[1]
+        args["op"] = rest[0]
+        # المسار اختياري: أوامر مثل pdf_merge تاخذ paths وout بـ --json
+        if len(rest) > 1:
+            args["path"] = rest[1]
         return pc_call("office", args)
     if op == "open_url":
         return pc_call("open_url", {"url": rest[0]})

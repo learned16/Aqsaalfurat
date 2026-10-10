@@ -84,8 +84,8 @@ if (-not $py) {
 $factoryOk = $false
 if ($py) {
   Write-Host "✓ Python: $py" -ForegroundColor Green
-  Write-Host 'تنصيب المكتبات (python-docx, openpyxl, pypdf, reportlab, pillow, pywin32)…'
-  & $py -m pip install --user --quiet --disable-pip-version-check python-docx openpyxl pypdf reportlab pillow pywin32 | Out-Host
+  Write-Host 'تنصيب المكتبات (python-docx, openpyxl, python-pptx, pypdf, reportlab, pillow, pywin32)…'
+  & $py -m pip install --user --quiet --disable-pip-version-check python-docx openpyxl python-pptx pypdf reportlab pillow pywin32 | Out-Host
   $fdst = Join-Path $dir 'factory'
   New-Item -ItemType Directory -Force -Path $fdst | Out-Null
   Copy-Item -Path (Join-Path $PSScriptRoot 'factory\*.py') -Destination $fdst -Force

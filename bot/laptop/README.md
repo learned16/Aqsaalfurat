@@ -24,7 +24,18 @@
      | 🟢 فوراً | تصفح، بحث، سحب ملف، حط ملف، مجلد، نسخ، PDF، طباعة، المصنع، حالة اللابتوب، الطابعات، zip، السجل، Excel وWord (office) |
      | 🟡 بموافقتك | تنصيب برنامج من قائمة ثابتة (SumatraPDF، LibreOffice، Python، Google Drive، 7zip، Chrome، Edge، Firefox، Notepad++، VLC، Zoom، AnyDesk، WinRAR، Office، Acrobat Reader)، الطابعة الافتراضية، إلغاء طابور الطباعة، سد Word، صورة الشاشة، وقت التصحية، فتح رابط بالمتصفح، تحديث البرنامج |
 
-     **Excel وWord (office، بدون ما يفتح البرنامج):** قراية أوراق وخلايا، كتابة خلايا ومعادلات، إضافة صف، قراية نص مستند، واستبدال نص. الكتابة تحفظ النسخة القديمة بـ `_نسخ_قبل_التعديل`.
+     **Office وPDF (`office`، بدون ما يفتح أي برنامج — أرخص شي بالتوكنز):**
+
+     | البرنامج | الأوامر |
+     |---|---|
+     | Excel | `xlsx_sheets` `xlsx_read` `xlsx_find` `xlsx_set` (خلايا ومعادلات) `xlsx_append` `xlsx_new` `xlsx_add_sheet` |
+     | Word | `docx_read` `docx_tables` `docx_replace` `docx_new` `docx_append` (فقرات وجداول) |
+     | PowerPoint | `pptx_read` `pptx_replace` `pptx_new` `pptx_add` |
+     | PDF | `pdf_info` `pdf_text` `pdf_merge` `pdf_split` `pdf_rotate` |
+
+     كل حقل مسار (`path`, `out`, `out_dir`, `paths`) يتأكد إنه داخل المجلدات المسموحة، والكتابة تحفظ النسخة القديمة بـ `_نسخ_قبل_التعديل`. الـ PDF المصوّر ما بيه نص محفور، فـ `pdf_text` يكلك إنه مصوّر ويحتاج قراية كصورة.
+
+     **تحويل لـ PDF بالبرنامج الحقيقي:** أمر `pdf` صار يشتغل على Word وExcel وPowerPoint (مو Word بس)، فالترويسة والختم يطلعون مثل ما هم.
      | 🔴 ماكو | مسح ملفات، تشغيل أوامر أو برامج عشوائية |
 
      الأمر الحساس يوصلك بتلغرام بتفاصيله ويه ✅ نفّذ / ❌ ارفض، وما يتنفذ إلا إنت توافق خلال ساعة. أي شغلة جديدة تنضاف للمكتبة بتحديث.

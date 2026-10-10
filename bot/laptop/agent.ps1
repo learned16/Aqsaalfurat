@@ -242,6 +242,36 @@ function Word-ToPdf($src, $dst) {
   } finally { $word.Quit() }
 }
 
+function Excel-ToPdf($src, $dst) {
+  $xl = New-Object -ComObject Excel.Application
+  $xl.Visible = $false
+  $xl.DisplayAlerts = $false
+  try {
+    $wb = $xl.Workbooks.Open($src, 0, $true)
+    $wb.ExportAsFixedFormat(0, $dst)  # 0 = xlTypePDF
+    $wb.Close($false)
+  } finally { $xl.Quit() }
+}
+
+function PowerPoint-ToPdf($src, $dst) {
+  $pp = New-Object -ComObject PowerPoint.Application
+  try {
+    $prs = $pp.Presentations.Open($src, $true, $false, $false)
+    $prs.SaveAs($dst, 32)  # 32 = ppSaveAsPDF
+    $prs.Close()
+  } finally { $pp.Quit() }
+}
+
+# يحوّل أي ملف Office لـ PDF بالبرنامج الحقيقي، حتى الترويسة والختم يطلعون مثل ما هم
+function Office-ToPdf($src, $dst) {
+  switch ([IO.Path]::GetExtension($src).ToLower()) {
+    { @('.doc', '.docx', '.rtf') -contains $_ } { Word-ToPdf $src $dst; return 'Word' }
+    { @('.xls', '.xlsx', '.xlsm', '.csv') -contains $_ } { Excel-ToPdf $src $dst; return 'Excel' }
+    { @('.ppt', '.pptx') -contains $_ } { PowerPoint-ToPdf $src $dst; return 'PowerPoint' }
+    default { throw 'التحويل لملفات Word وExcel وPowerPoint بس' }
+  }
+}
+
 function Pc-Op($c) {
   $a = $c.args
   if ($c.argsRef) { $a = Invoke-RestMethod -Uri "$base/pc/args?id=$($c.id)" -Headers $headers -TimeoutSec 120 }
@@ -285,13 +315,12 @@ function Pc-Op($c) {
     }
     'pdf' {
       $src = Allowed-Path $a.path
-      if (@('.doc', '.docx', '.rtf') -notcontains [IO.Path]::GetExtension($src).ToLower()) { throw 'التحويل لملفات Word بس' }
       $dst = $a.out
       if (-not $dst) { $dst = [IO.Path]::ChangeExtension($src, '.pdf') }
       $dst = Allowed-Path $dst
       $old = Backup-Existing $dst
-      Word-ToPdf $src $dst
-      return @{ path = $dst; backup = $old }
+      $app = Office-ToPdf $src $dst
+      return @{ path = $dst; backup = $old; app = $app }
     }
     'print' { $p = Allowed-Path $a.path; Print-File $p; return @{ printed = $p } }
     'tender' {
@@ -388,13 +417,21 @@ function Pc-Op($c) {
       return @{ wake = $t }
     }
     'office' {
-      $src = Allowed-Path $a.path
       if (-not $python) { throw 'Python ناقص (المصنع مو منصّب)' }
-      # أوامر الكتابة تحفظ النسخة القديمة أول
-      if (@('xlsx_set', 'xlsx_append', 'docx_replace') -contains "$($a.op)") { Backup-Existing $src | Out-Null }
       $req = @{}
       foreach ($k in $a.PSObject.Properties.Name) { $req[$k] = $a.$k }
-      $req['path'] = $src
+      # كل حقل مسار يتأكد إنه داخل المجلدات المسموحة قبل ما يوصل لـ office.py
+      foreach ($k in @('path', 'out', 'out_dir')) {
+        if ($req[$k]) { $req[$k] = Allowed-Path $req[$k] }
+      }
+      if ($req['paths']) {
+        $req['paths'] = @(foreach ($p in @($req['paths'])) { Allowed-Path $p })
+      }
+      # أوامر الكتابة تحفظ النسخة القديمة أول (الناتج الجديد أو الملف اللي يتعدّل)
+      $writes = @('xlsx_set', 'xlsx_append', 'xlsx_add_sheet', 'docx_replace', 'docx_append',
+        'pptx_replace', 'pptx_add')
+      if ($writes -contains "$($a.op)") { Backup-Existing $req['path'] | Out-Null }
+      if ($req['out']) { Backup-Existing $req['out'] | Out-Null }
       $reqFile = Join-Path $env:TEMP ('aqsa-office-' + $c.id + '.json')
       [IO.File]::WriteAllText($reqFile, ($req | ConvertTo-Json -Depth 8 -Compress), $utf8)
       $env:PYTHONIOENCODING = 'utf-8'
