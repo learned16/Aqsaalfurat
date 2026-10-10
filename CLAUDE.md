@@ -57,3 +57,6 @@ JSON للمزامنة: `{brief:{date,body}, tenders:[{key,title,entity,number,go
 - جهة جديدة: سوّي وصفتها `الجهات/<الجهة>.json` (انسخ عام.json) وحطها بـ `bridge.py pc put`. القسم الرابع الخاص بالجهة يتعبّى ويدخل بحقل «ملف القسم الرابع».
 - إيد Claude (مكتبة أوامر): 🟢 `python3 bridge.py pc roots|ls|find|get|put|mkdir|copy|pdf|print|tender|check|docs|status|printers|log|zip`، و🟡 `install|default_printer|clear_queue|close_word|screenshot|wake_time` توصل لصاحب البوت بتلغرام وما تتنفذ إلا يوافق. يحتاج `PC_KEY` بالبيئة وبالوسيط. ماكو تشغيل أوامر عشوائية (نظام الحماية رفضه، لا تحاول تبنيه)؛ أي شغلة جديدة تنضاف أمر ثابت بالمكتبة.
 - البوت: 🖥️ المكتب للمدير (📦 مناقصة جديدة، 📄 نموذج الطلب، اطبع ملف، ⏰ المستمسكات، أوامر اللابتوب). الوسيط يمسك زر «🖨️ اطبع الحزمة» (pcpr:) بنفسه.
+- وضع 2026-10-10: الوسيط الجديد منشور (فيه /pc و PC_KEY)، والمستخدم صلّح البوت ولصق Code.gs الجديد. اللابتوب ما منصّب بعد (ملف التنصيب AqsaOffice-laptop.zip عنده).
+- متغيرات بيئة الجلسة انصلحت (BOT_KEY، BOT_URL، PC_KEY كل واحد بسطر). بأول جلسة جديدة: تحقق إن BOT_URL ينتهي بـ /exec وإن PC_KEY يقبله الوسيط (`bridge.py pc roots` يرجع 403 إذا ما يطابق).
+- PC_KEY وBOT_KEY انكتبوا بالمحادثة: ذكّر المستخدم يغيّرهم (PC_KEY بالوسيط والبيئة سوه، وBOT_KEY = API_KEY بـ Script Properties).
